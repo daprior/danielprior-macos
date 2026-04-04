@@ -1,24 +1,24 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { AppleIcon } from "@/components/icons"
+import { useEffect, useState } from "react";
+import { AppleIcon } from "@/components/icons";
 
 export default function BootScreen() {
-  const [progress, setProgress] = useState(0)
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
     const interval = setInterval(() => {
       setProgress((prev) => {
         if (prev >= 100) {
-          clearInterval(interval)
-          return 100
+          clearInterval(interval);
+          return 100;
         }
-        return prev + 10
-      })
-    }, 300)
+        return prev + 10;
+      });
+    }, 300);
 
-    return () => clearInterval(interval)
-  }, [])
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="h-screen w-screen bg-black flex flex-col items-center justify-center">
@@ -30,5 +30,5 @@ export default function BootScreen() {
         />
       </div>
     </div>
-  )
+  );
 }

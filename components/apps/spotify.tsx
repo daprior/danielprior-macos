@@ -1,222 +1,232 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useRef, useEffect } from "react"
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Shuffle, Repeat } from "lucide-react"
+import { useState, useRef, useEffect, useCallback } from "react";
+import Image from "next/image";
+import {
+  Play,
+  Pause,
+  SkipBack,
+  SkipForward,
+  Volume2,
+  VolumeX,
+  Shuffle,
+  Repeat,
+} from "lucide-react";
 
 interface SpotifyProps {
-  isDarkMode?: boolean
+  isDarkMode?: boolean;
 }
 
+const PLAYLIST = [
+  {
+    title: "Lofi Study Beat",
+    artist: "Chill Artist",
+    cover: "/cozy-corner-beats.png",
+    file: "/lofi-study-112191.mp3",
+    duration: "3:42",
+  },
+  {
+    title: "Acoustic Breeze",
+    artist: "Benjamin Tissot",
+    cover: "/cool-blue-jazz.png",
+    file: "/lofi-study-112191.mp3",
+    duration: "2:56",
+  },
+  {
+    title: "Sunny Morning",
+    artist: "Alex Productions",
+    cover: "/grand-piano-keys.png",
+    file: "/lofi-study-112191.mp3",
+    duration: "4:10",
+  },
+];
+
 export default function Spotify({ isDarkMode = true }: SpotifyProps) {
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [currentTrackIndex, setCurrentTrackIndex] = useState(0)
-  const [currentTime, setCurrentTime] = useState(0)
-  const [duration, setDuration] = useState(0)
-  const [volume, setVolume] = useState(0.7)
-  const [isMuted, setIsMuted] = useState(false)
-  const [isAudioReady, setIsAudioReady] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [volume, setVolume] = useState(0.7);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isAudioReady, setIsAudioReady] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const audioRef = useRef<HTMLAudioElement>(null)
+  const audioRef = useRef<HTMLAudioElement>(null);
 
-  // Updated playlist with local files
-  const playlist = [
-    {
-      title: "Lofi Study Beat",
-      artist: "Chill Artist",
-      cover: "/cozy-corner-beats.png",
-      file: "/lofi-study-112191.mp3",
-      duration: "3:42",
-    },
-    {
-      title: "Acoustic Breeze",
-      artist: "Benjamin Tissot",
-      cover: "/cool-blue-jazz.png",
-      // Fallback to the first track if the second one isn't available
-      file: "/lofi-study-112191.mp3",
-      duration: "2:56",
-    },
-    {
-      title: "Sunny Morning",
-      artist: "Alex Productions",
-      cover: "/grand-piano-keys.png",
-      // Fallback to the first track if the third one isn't available
-      file: "/lofi-study-112191.mp3",
-      duration: "4:10",
-    },
-  ]
+  const currentTrack = PLAYLIST[currentTrackIndex];
 
-  const currentTrack = playlist[currentTrackIndex]
+  const bgColor = isDarkMode ? "bg-gray-900" : "bg-white";
+  const textColor = isDarkMode ? "text-white" : "text-gray-800";
+  const secondaryBg = isDarkMode ? "bg-gray-800" : "bg-gray-100";
 
-  const bgColor = isDarkMode ? "bg-gray-900" : "bg-white"
-  const textColor = isDarkMode ? "text-white" : "text-gray-800"
-  const secondaryBg = isDarkMode ? "bg-gray-800" : "bg-gray-100"
+  const prepareForTrackChange = useCallback(() => {
+    setIsAudioReady(false);
+    setError(null);
+    setCurrentTime(0);
+    setDuration(0);
+  }, []);
+
+  const handlePrevious = () => {
+    // Pause current track to avoid errors
+    if (isPlaying && audioRef.current) {
+      audioRef.current.pause();
+    }
+
+    prepareForTrackChange();
+    setIsPlaying(true);
+    setCurrentTrackIndex((prev) =>
+      prev === 0 ? PLAYLIST.length - 1 : prev - 1,
+    );
+  };
+
+  const handleNext = () => {
+    // Pause current track to avoid errors
+    if (isPlaying && audioRef.current) {
+      audioRef.current.pause();
+    }
+
+    prepareForTrackChange();
+    setIsPlaying(true);
+    setCurrentTrackIndex((prev) =>
+      prev === PLAYLIST.length - 1 ? 0 : prev + 1,
+    );
+  };
 
   useEffect(() => {
-    const audio = audioRef.current
-    if (!audio) return
+    const audio = audioRef.current;
+    if (!audio) return;
 
-    // Reset audio ready state when track changes
-    setIsAudioReady(false)
-    setError(null)
-
-    const updateTime = () => setCurrentTime(audio.currentTime)
+    const updateTime = () => setCurrentTime(audio.currentTime);
     const updateDuration = () => {
-      setDuration(audio.duration)
-      setIsAudioReady(true)
-    }
-    const handleEnd = () => handleNext()
-    const handleCanPlayThrough = () => setIsAudioReady(true)
+      setDuration(audio.duration);
+      setIsAudioReady(true);
+    };
+    const handleEnd = () => {
+      prepareForTrackChange();
+      setCurrentTrackIndex((prev) =>
+        prev === PLAYLIST.length - 1 ? 0 : prev + 1,
+      );
+      setIsPlaying(true);
+    };
+    const handleCanPlayThrough = () => setIsAudioReady(true);
     const handleError = (e: ErrorEvent) => {
-      console.error("Audio error:", e)
-      setError("Error loading audio")
-      setIsPlaying(false)
-    }
+      console.error("Audio error:", e);
+      setError("Error loading audio");
+      setIsPlaying(false);
+    };
 
-    audio.addEventListener("timeupdate", updateTime)
-    audio.addEventListener("loadedmetadata", updateDuration)
-    audio.addEventListener("canplaythrough", handleCanPlayThrough)
-    audio.addEventListener("ended", handleEnd)
-    audio.addEventListener("error", handleError as EventListener)
+    audio.addEventListener("timeupdate", updateTime);
+    audio.addEventListener("loadedmetadata", updateDuration);
+    audio.addEventListener("canplaythrough", handleCanPlayThrough);
+    audio.addEventListener("ended", handleEnd);
+    audio.addEventListener("error", handleError as EventListener);
 
     // Preload the audio
-    audio.load()
+    audio.load();
 
     return () => {
-      audio.removeEventListener("timeupdate", updateTime)
-      audio.removeEventListener("loadedmetadata", updateDuration)
-      audio.removeEventListener("canplaythrough", handleCanPlayThrough)
-      audio.removeEventListener("ended", handleEnd)
-      audio.removeEventListener("error", handleError as EventListener)
-    }
-  }, [currentTrackIndex])
+      audio.removeEventListener("timeupdate", updateTime);
+      audio.removeEventListener("loadedmetadata", updateDuration);
+      audio.removeEventListener("canplaythrough", handleCanPlayThrough);
+      audio.removeEventListener("ended", handleEnd);
+      audio.removeEventListener("error", handleError as EventListener);
+    };
+  }, [currentTrackIndex, prepareForTrackChange]);
 
   useEffect(() => {
-    const audio = audioRef.current
-    if (!audio || !isAudioReady) return
+    const audio = audioRef.current;
+    if (!audio || !isAudioReady) return;
 
     if (isPlaying) {
-      const playPromise = audio.play()
+      const playPromise = audio.play();
       if (playPromise !== undefined) {
         playPromise.catch((error) => {
-          console.error("Error playing audio:", error)
-          setIsPlaying(false)
-          setError("Playback was prevented by the browser. Try clicking play again.")
-        })
+          console.error("Error playing audio:", error);
+          setIsPlaying(false);
+          setError(
+            "Playback was prevented by the browser. Try clicking play again.",
+          );
+        });
       }
     } else {
-      audio.pause()
+      audio.pause();
     }
-  }, [isPlaying, isAudioReady])
+  }, [isPlaying, isAudioReady]);
 
   useEffect(() => {
-    const audio = audioRef.current
-    if (!audio) return
+    const audio = audioRef.current;
+    if (!audio) return;
 
-    audio.volume = isMuted ? 0 : volume
-  }, [volume, isMuted])
+    audio.volume = isMuted ? 0 : volume;
+  }, [volume, isMuted]);
 
   const togglePlay = () => {
     if (!isAudioReady) {
       // If audio isn't ready yet, don't try to play
-      return
+      return;
     }
-    setIsPlaying(!isPlaying)
-  }
-
-  const handlePrevious = () => {
-    // First pause current track to avoid errors
-    if (isPlaying && audioRef.current) {
-      audioRef.current.pause()
-    }
-
-    setIsPlaying(false)
-    setCurrentTrackIndex((prev) => (prev === 0 ? playlist.length - 1 : prev - 1))
-
-    // We'll set isPlaying to true after the new track is loaded
-    setTimeout(() => {
-      if (isAudioReady) {
-        setIsPlaying(true)
-      }
-    }, 100)
-  }
-
-  const handleNext = () => {
-    // First pause current track to avoid errors
-    if (isPlaying && audioRef.current) {
-      audioRef.current.pause()
-    }
-
-    setIsPlaying(false)
-    setCurrentTrackIndex((prev) => (prev === playlist.length - 1 ? 0 : prev + 1))
-
-    // We'll set isPlaying to true after the new track is loaded
-    setTimeout(() => {
-      if (isAudioReady) {
-        setIsPlaying(true)
-      }
-    }, 100)
-  }
+    setIsPlaying(!isPlaying);
+  };
 
   const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const audio = audioRef.current
-    if (!audio) return
+    const audio = audioRef.current;
+    if (!audio) return;
 
-    const newTime = Number.parseFloat(e.target.value)
+    const newTime = Number.parseFloat(e.target.value);
     try {
-      audio.currentTime = newTime
-      setCurrentTime(newTime)
+      audio.currentTime = newTime;
+      setCurrentTime(newTime);
     } catch (err) {
-      console.error("Error setting time:", err)
+      console.error("Error setting time:", err);
     }
-  }
+  };
 
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newVolume = Number.parseFloat(e.target.value)
-    setVolume(newVolume)
-    setIsMuted(newVolume === 0)
-  }
+    const newVolume = Number.parseFloat(e.target.value);
+    setVolume(newVolume);
+    setIsMuted(newVolume === 0);
+  };
 
   const toggleMute = () => {
-    setIsMuted(!isMuted)
-  }
+    setIsMuted(!isMuted);
+  };
 
   const formatTime = (time: number) => {
-    const minutes = Math.floor(time / 60)
-    const seconds = Math.floor(time % 60)
-    return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`
-  }
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60);
+    return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
+  };
 
   const selectTrack = (index: number) => {
     if (index === currentTrackIndex) {
-      togglePlay()
-      return
+      togglePlay();
+      return;
     }
 
     // First pause current track to avoid errors
     if (isPlaying && audioRef.current) {
-      audioRef.current.pause()
+      audioRef.current.pause();
     }
 
-    setIsPlaying(false)
-    setCurrentTrackIndex(index)
-
-    // We'll set isPlaying to true after the new track is loaded
-    setTimeout(() => {
-      if (isAudioReady) {
-        setIsPlaying(true)
-      }
-    }, 100)
-  }
+    prepareForTrackChange();
+    setIsPlaying(true);
+    setCurrentTrackIndex(index);
+  };
 
   return (
     <div className={`h-full ${bgColor} ${textColor} flex flex-col`}>
       {/* Header */}
       <div className={`${secondaryBg} p-4 flex items-center justify-between`}>
         <div className="flex items-center">
-          <img src="/spotify.png" alt="Spotify" className="w-8 h-8 mr-3" />
+          <Image
+            src="/spotify.png"
+            alt="Spotify"
+            width={32}
+            height={32}
+            className="w-8 h-8 mr-3"
+          />
           <h2 className="font-semibold">Spotify</h2>
         </div>
         <div className="flex space-x-2">
@@ -232,9 +242,11 @@ export default function Spotify({ isDarkMode = true }: SpotifyProps) {
       {/* Main content */}
       <div className="flex-1 flex flex-col items-center justify-center p-6">
         <div className="w-48 h-48 mb-6 rounded-md overflow-hidden shadow-lg">
-          <img
+          <Image
             src={currentTrack.cover || "/placeholder.svg"}
             alt={`${currentTrack.title} cover`}
+            width={192}
+            height={192}
             className="w-full h-full object-cover"
           />
         </div>
@@ -249,7 +261,9 @@ export default function Spotify({ isDarkMode = true }: SpotifyProps) {
         <div className="w-full max-w-md mb-4">
           <div className="flex justify-between text-xs text-gray-400 mb-1">
             <span>{formatTime(currentTime)}</span>
-            <span>{isAudioReady ? formatTime(duration) : currentTrack.duration}</span>
+            <span>
+              {isAudioReady ? formatTime(duration) : currentTrack.duration}
+            </span>
           </div>
           <input
             type="range"
@@ -281,18 +295,32 @@ export default function Spotify({ isDarkMode = true }: SpotifyProps) {
             onClick={togglePlay}
             disabled={!isAudioReady}
           >
-            {isPlaying ? <Pause className="w-8 h-8 text-black" /> : <Play className="w-8 h-8 text-black" />}
+            {isPlaying ? (
+              <Pause className="w-8 h-8 text-black" />
+            ) : (
+              <Play className="w-8 h-8 text-black" />
+            )}
           </button>
 
-          <button className="p-2 rounded-full hover:bg-gray-700 text-gray-300 hover:text-white" onClick={handleNext}>
+          <button
+            className="p-2 rounded-full hover:bg-gray-700 text-gray-300 hover:text-white"
+            onClick={handleNext}
+          >
             <SkipForward className="w-6 h-6" />
           </button>
         </div>
 
         {/* Volume control */}
         <div className="flex items-center w-full max-w-xs">
-          <button className="p-2 rounded-full hover:bg-gray-700 mr-2" onClick={toggleMute}>
-            {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+          <button
+            className="p-2 rounded-full hover:bg-gray-700 mr-2"
+            onClick={toggleMute}
+          >
+            {isMuted ? (
+              <VolumeX className="w-4 h-4" />
+            ) : (
+              <Volume2 className="w-4 h-4" />
+            )}
           </button>
 
           <input
@@ -316,30 +344,41 @@ export default function Spotify({ isDarkMode = true }: SpotifyProps) {
       <div className={`${secondaryBg} p-4`}>
         <h3 className="font-medium mb-2">Playlist</h3>
         <div className="space-y-2">
-          {playlist.map((track, index) => (
-            <div
+          {PLAYLIST.map((track, index) => (
+            <button
               key={index}
+              type="button"
               className={`flex items-center p-2 rounded cursor-pointer ${
-                currentTrackIndex === index ? "bg-green-900/30" : "hover:bg-gray-700/30"
+                currentTrackIndex === index
+                  ? "bg-green-900/30"
+                  : "hover:bg-gray-700/30"
               }`}
               onClick={() => selectTrack(index)}
             >
               <div className="w-10 h-10 mr-3 rounded overflow-hidden">
-                <img src={track.cover || "/placeholder.svg"} alt={track.title} className="w-full h-full object-cover" />
+                <Image
+                  src={track.cover || "/placeholder.svg"}
+                  alt={track.title}
+                  width={40}
+                  height={40}
+                  className="w-full h-full object-cover"
+                />
               </div>
               <div className="flex-1">
-                <p className={`text-sm font-medium ${currentTrackIndex === index ? "text-green-500" : ""}`}>
+                <p
+                  className={`text-sm font-medium ${currentTrackIndex === index ? "text-green-500" : ""}`}
+                >
                   {track.title}
                 </p>
                 <p className="text-xs text-gray-400">{track.artist}</p>
               </div>
               <div className="text-xs text-gray-400">{track.duration}</div>
-            </div>
+            </button>
           ))}
         </div>
       </div>
 
       <audio ref={audioRef} src={currentTrack.file} preload="auto" />
     </div>
-  )
+  );
 }

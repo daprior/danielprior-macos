@@ -1,41 +1,62 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { User, Shield, Wifi, Bluetooth, Bell, DiscIcon as Display, Clock, Keyboard, Mouse, Globe } from "lucide-react"
+import { useState } from "react";
+import {
+  User,
+  Shield,
+  Wifi,
+  Bluetooth,
+  Bell,
+  DiscIcon as Display,
+  Clock,
+  Keyboard,
+  Mouse,
+  Globe,
+} from "lucide-react";
+import { SETTINGS_SECTIONS } from "@/constant/settings-sections";
 
 export default function Settings() {
-  const [activeSection, setActiveSection] = useState("general")
+  const [activeSection, setActiveSection] = useState("general");
 
-  const sections = [
-    { id: "general", name: "General", icon: <Globe className="w-5 h-5" /> },
-    { id: "appearance", name: "Appearance", icon: <Display className="w-5 h-5" /> },
-    { id: "wifi", name: "Wi-Fi", icon: <Wifi className="w-5 h-5" /> },
-    { id: "bluetooth", name: "Bluetooth", icon: <Bluetooth className="w-5 h-5" /> },
-    { id: "notifications", name: "Notifications", icon: <Bell className="w-5 h-5" /> },
-    { id: "users", name: "Users & Groups", icon: <User className="w-5 h-5" /> },
-    { id: "security", name: "Security", icon: <Shield className="w-5 h-5" /> },
-    { id: "keyboard", name: "Keyboard", icon: <Keyboard className="w-5 h-5" /> },
-    { id: "mouse", name: "Mouse", icon: <Mouse className="w-5 h-5" /> },
-    { id: "time", name: "Date & Time", icon: <Clock className="w-5 h-5" /> },
-  ]
+  const iconMap = {
+    globe: Globe,
+    display: Display,
+    wifi: Wifi,
+    bluetooth: Bluetooth,
+    bell: Bell,
+    user: User,
+    shield: Shield,
+    keyboard: Keyboard,
+    mouse: Mouse,
+    clock: Clock,
+  } as const;
 
   return (
     <div className="flex h-full">
       {/* Sidebar */}
       <div className="w-64 bg-gray-100 p-2">
         <div className="space-y-1">
-          {sections.map((section) => (
-            <div
-              key={section.id}
-              className={`flex items-center px-3 py-2 rounded cursor-pointer ${
-                activeSection === section.id ? "bg-blue-500 text-white" : "hover:bg-gray-200"
-              }`}
-              onClick={() => setActiveSection(section.id)}
-            >
-              <div className="mr-3">{section.icon}</div>
-              <span>{section.name}</span>
-            </div>
-          ))}
+          {SETTINGS_SECTIONS.map((section) => {
+            const Icon = iconMap[section.icon];
+
+            return (
+              <button
+                key={section.id}
+                type="button"
+                className={`flex items-center px-3 py-2 rounded cursor-pointer ${
+                  activeSection === section.id
+                    ? "bg-blue-500 text-white"
+                    : "hover:bg-gray-200"
+                }`}
+                onClick={() => setActiveSection(section.id)}
+              >
+                <div className="mr-3">
+                  <Icon className="w-5 h-5" />
+                </div>
+                <span>{section.name}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -68,7 +89,9 @@ export default function Settings() {
                     <p className="font-medium">Your portfolio is up to date</p>
                     <p className="text-sm text-gray-600">macOS Portfolio 1.0</p>
                   </div>
-                  <button className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Check Now</button>
+                  <button className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                    Check Now
+                  </button>
                 </div>
               </div>
 
@@ -162,12 +185,14 @@ export default function Settings() {
         {activeSection !== "general" && activeSection !== "appearance" && (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
-              <h2 className="text-2xl font-semibold mb-2">{sections.find((s) => s.id === activeSection)?.name}</h2>
+              <h2 className="text-2xl font-semibold mb-2">
+                {SETTINGS_SECTIONS.find((s) => s.id === activeSection)?.name}
+              </h2>
               <p className="text-gray-500">This section is under development</p>
             </div>
           </div>
         )}
       </div>
     </div>
-  )
+  );
 }

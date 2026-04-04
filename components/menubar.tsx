@@ -1,21 +1,40 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useRef, useEffect } from "react"
-import { Search } from "lucide-react"
-import { AppleIcon } from "@/components/icons"
+import { useState, useRef, useEffect } from "react";
+import Image from "next/image";
+import { Search } from "lucide-react";
+import { AppleIcon } from "@/components/icons";
+import { STORAGE_KEYS } from "@/constant/storage-keys";
+
+type BatteryManager = {
+  level: number;
+  charging: boolean;
+  addEventListener: (
+    type: "levelchange" | "chargingchange",
+    listener: () => void,
+  ) => void;
+  removeEventListener: (
+    type: "levelchange" | "chargingchange",
+    listener: () => void,
+  ) => void;
+};
+
+type NavigatorWithBattery = Navigator & {
+  getBattery?: () => Promise<BatteryManager>;
+};
 
 interface MenubarProps {
-  time: Date
-  onLogout: () => void
-  onSleep: () => void
-  onShutdown: () => void
-  onRestart: () => void
-  onSpotlightClick: () => void
-  onControlCenterClick: () => void
-  isDarkMode: boolean
-  activeWindow: { id: string; title: string } | null
+  time: Date;
+  onLogout: () => void;
+  onSleep: () => void;
+  onShutdown: () => void;
+  onRestart: () => void;
+  onSpotlightClick: () => void;
+  onControlCenterClick: () => void;
+  isDarkMode: boolean;
+  activeWindow: { id: string; title: string } | null;
 }
 
 export default function Menubar({
@@ -29,13 +48,18 @@ export default function Menubar({
   isDarkMode,
   activeWindow,
 }: MenubarProps) {
-  const [activeMenu, setActiveMenu] = useState<string | null>(null)
-  const [batteryLevel, setBatteryLevel] = useState(100)
-  const [isCharging, setIsCharging] = useState(false)
-  const [showWifiToggle, setShowWifiToggle] = useState(false)
-  const [wifiEnabled, setWifiEnabled] = useState(true)
-  const menuRef = useRef<HTMLDivElement>(null)
-  const wifiRef = useRef<HTMLDivElement>(null)
+  const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const [batteryLevel, setBatteryLevel] = useState(100);
+  const [isCharging, setIsCharging] = useState(false);
+  const [showWifiToggle, setShowWifiToggle] = useState(false);
+  const [wifiEnabled, setWifiEnabled] = useState(() => {
+    if (typeof window === "undefined") return true;
+    const savedWifi = window.localStorage.getItem(STORAGE_KEYS.wifiEnabled);
+    if (savedWifi === null) return true;
+    return savedWifi === "true";
+  });
+  const menuRef = useRef<HTMLDivElement>(null);
+  const wifiRef = useRef<HTMLDivElement>(null);
 
   const formattedTime = time.toLocaleString("en-US", {
     weekday: "short",
@@ -44,37 +68,45 @@ export default function Menubar({
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
-  })
+  });
+
+  const updateBatteryStatus = (battery: BatteryManager) => {
+    setBatteryLevel(Math.round(battery.level * 100));
+    setIsCharging(battery.charging);
+  };
 
   useEffect(() => {
     // Try to get battery information if available
-    if ("getBattery" in navigator) {
-      // @ts-ignore - getBattery is not in the standard navigator type
-      navigator
-        .getBattery()
-        .then((battery: any) => {
-          updateBatteryStatus(battery)
+    const nav = navigator as NavigatorWithBattery;
 
-          // Listen for battery status changes
-          battery.addEventListener("levelchange", () => updateBatteryStatus(battery))
-          battery.addEventListener("chargingchange", () => updateBatteryStatus(battery))
+    let batteryManager: BatteryManager | null = null;
+    let onLevelChange: (() => void) | null = null;
+    let onChargingChange: (() => void) | null = null;
+
+    if (nav.getBattery) {
+      nav
+        .getBattery()
+        .then((battery) => {
+          batteryManager = battery;
+
+          updateBatteryStatus(battery);
+
+          onLevelChange = () => updateBatteryStatus(battery);
+          onChargingChange = () => updateBatteryStatus(battery);
+
+          battery.addEventListener("levelchange", onLevelChange);
+          battery.addEventListener("chargingchange", onChargingChange);
         })
         .catch(() => {
           // If there's an error, default to 100%
-          setBatteryLevel(100)
-          setIsCharging(false)
-        })
-    }
-
-    // Load WiFi state from localStorage
-    const savedWifi = localStorage.getItem("wifiEnabled")
-    if (savedWifi !== null) {
-      setWifiEnabled(savedWifi === "true")
+          setBatteryLevel(100);
+          setIsCharging(false);
+        });
     }
 
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setActiveMenu(null)
+        setActiveMenu(null);
       }
 
       if (
@@ -82,44 +114,48 @@ export default function Menubar({
         !wifiRef.current.contains(event.target as Node) &&
         !(event.target as Element).closest(".wifi-icon")
       ) {
-        setShowWifiToggle(false)
+        setShowWifiToggle(false);
       }
-    }
+    };
 
-    document.addEventListener("mousedown", handleClickOutside)
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
-    }
-  }, [])
+      document.removeEventListener("mousedown", handleClickOutside);
 
-  const updateBatteryStatus = (battery: any) => {
-    setBatteryLevel(Math.round(battery.level * 100))
-    setIsCharging(battery.charging)
-  }
+      if (batteryManager && onLevelChange && onChargingChange) {
+        batteryManager.removeEventListener("levelchange", onLevelChange);
+        batteryManager.removeEventListener("chargingchange", onChargingChange);
+      }
+    };
+  }, []);
 
   const toggleMenu = (menuName: string) => {
     if (activeMenu === menuName) {
-      setActiveMenu(null)
+      setActiveMenu(null);
     } else {
-      setActiveMenu(menuName)
+      setActiveMenu(menuName);
     }
-  }
+  };
 
   const toggleWifi = () => {
-    const newState = !wifiEnabled
-    setWifiEnabled(newState)
-    localStorage.setItem("wifiEnabled", newState.toString())
-  }
+    const newState = !wifiEnabled;
+    setWifiEnabled(newState);
+    localStorage.setItem(STORAGE_KEYS.wifiEnabled, newState.toString());
+  };
 
   const toggleWifiPopup = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    setShowWifiToggle(!showWifiToggle)
-  }
+    e.stopPropagation();
+    setShowWifiToggle(!showWifiToggle);
+  };
 
-  const menuBgClass = isDarkMode ? "bg-black/40 backdrop-blur-md" : "bg-white/20 backdrop-blur-md"
-  const dropdownBgClass = isDarkMode ? "bg-gray-800/90 backdrop-blur-md" : "bg-gray-200/90 backdrop-blur-md"
-  const textClass = isDarkMode ? "text-white" : "text-gray-800"
-  const hoverClass = isDarkMode ? "hover:bg-blue-600" : "hover:bg-blue-400"
+  const menuBgClass = isDarkMode
+    ? "bg-black/40 backdrop-blur-md"
+    : "bg-white/20 backdrop-blur-md";
+  const dropdownBgClass = isDarkMode
+    ? "bg-gray-800/90 backdrop-blur-md"
+    : "bg-gray-200/90 backdrop-blur-md";
+  const textClass = isDarkMode ? "text-white" : "text-gray-800";
+  const hoverClass = isDarkMode ? "hover:bg-blue-600" : "hover:bg-blue-400";
 
   return (
     <div
@@ -135,23 +171,43 @@ export default function Menubar({
         </button>
 
         {activeMenu === "apple" && (
-          <div className={`absolute top-6 left-2 ${dropdownBgClass} rounded-lg shadow-xl ${textClass} py-1 w-56`}>
-            <button className={`w-full text-left px-4 py-1 ${hoverClass}`}>About This Mac</button>
+          <div
+            className={`absolute top-6 left-2 ${dropdownBgClass} rounded-lg shadow-xl ${textClass} py-1 w-56`}
+          >
+            <button className={`w-full text-left px-4 py-1 ${hoverClass}`}>
+              About This Mac
+            </button>
             <div className="border-t border-gray-700 my-1"></div>
-            <button className={`w-full text-left px-4 py-1 ${hoverClass}`}>System Settings...</button>
-            <button className={`w-full text-left px-4 py-1 ${hoverClass}`}>App Store...</button>
+            <button className={`w-full text-left px-4 py-1 ${hoverClass}`}>
+              System Settings...
+            </button>
+            <button className={`w-full text-left px-4 py-1 ${hoverClass}`}>
+              App Store...
+            </button>
             <div className="border-t border-gray-700 my-1"></div>
-            <button className={`w-full text-left px-4 py-1 ${hoverClass}`} onClick={onSleep}>
+            <button
+              className={`w-full text-left px-4 py-1 ${hoverClass}`}
+              onClick={onSleep}
+            >
               Sleep
             </button>
-            <button className={`w-full text-left px-4 py-1 ${hoverClass}`} onClick={onRestart}>
+            <button
+              className={`w-full text-left px-4 py-1 ${hoverClass}`}
+              onClick={onRestart}
+            >
               Restart...
             </button>
-            <button className={`w-full text-left px-4 py-1 ${hoverClass}`} onClick={onShutdown}>
+            <button
+              className={`w-full text-left px-4 py-1 ${hoverClass}`}
+              onClick={onShutdown}
+            >
               Shut Down...
             </button>
             <div className="border-t border-gray-700 my-1"></div>
-            <button className={`w-full text-left px-4 py-1 ${hoverClass}`} onClick={onLogout}>
+            <button
+              className={`w-full text-left px-4 py-1 ${hoverClass}`}
+              onClick={onLogout}
+            >
               Log Out Daniel...
             </button>
           </div>
@@ -171,9 +227,16 @@ export default function Menubar({
         <span className="mr-1">{batteryLevel}%</span>
         <div className="relative">
           <div className="w-6 h-3 border border-current rounded-sm relative">
-            <div className="absolute top-0 left-0 bottom-0 bg-current" style={{ width: `${batteryLevel}%` }}></div>
+            <div
+              className="absolute top-0 left-0 bottom-0 bg-current"
+              style={{ width: `${batteryLevel}%` }}
+            ></div>
             <div className="absolute -right-1 top-1/2 transform -translate-y-1/2 w-1 h-2 bg-current rounded-r-sm"></div>
-            {isCharging && <div className="absolute inset-0 flex items-center justify-center text-xs">⚡</div>}
+            {isCharging && (
+              <div className="absolute inset-0 flex items-center justify-center text-xs">
+                ⚡
+              </div>
+            )}
           </div>
         </div>
 
@@ -218,7 +281,12 @@ export default function Menubar({
               <div className="flex items-center justify-between">
                 <span className="font-medium">Wi-Fi</span>
                 <label className="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" checked={wifiEnabled} onChange={toggleWifi} className="sr-only peer" />
+                  <input
+                    type="checkbox"
+                    checked={wifiEnabled}
+                    onChange={toggleWifi}
+                    className="sr-only peer"
+                  />
                   <div className="w-11 h-6 bg-gray-500 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
                 </label>
               </div>
@@ -230,10 +298,15 @@ export default function Menubar({
           <Search className="w-4 h-4" />
         </button>
 
-        <button onClick={onControlCenterClick} className="flex items-center justify-center">
-          <img
+        <button
+          onClick={onControlCenterClick}
+          className="flex items-center justify-center"
+        >
+          <Image
             src="/control-center-icon.webp"
             alt="Control Center"
+            width={16}
+            height={16}
             className="w-4 h-4"
             style={{
               filter: isDarkMode ? "invert(1)" : "none",
@@ -245,5 +318,5 @@ export default function Menubar({
         <span>{formattedTime}</span>
       </div>
     </div>
-  )
+  );
 }

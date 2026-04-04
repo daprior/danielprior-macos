@@ -1,74 +1,84 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Wifi, Bluetooth, Moon, Sun, Volume2, VolumeX, Maximize } from "lucide-react"
+import { useState, useEffect } from "react";
+import {
+  Wifi,
+  Bluetooth,
+  Moon,
+  Sun,
+  Volume2,
+  VolumeX,
+  Maximize,
+} from "lucide-react";
+import { STORAGE_KEYS } from "@/constant/storage-keys";
+import { CONTROL_CENTER_CONFIG } from "@/constant/ui-config";
 
 interface ControlCenterProps {
-  onClose: () => void
-  isDarkMode: boolean
-  onToggleDarkMode: () => void
-  brightness: number
-  onBrightnessChange: (value: number) => void
+  isDarkMode: boolean;
+  onToggleDarkMode: () => void;
+  brightness: number;
+  onBrightnessChange: (value: number) => void;
 }
 
 export default function ControlCenter({
-  onClose,
   isDarkMode,
   onToggleDarkMode,
   brightness,
   onBrightnessChange,
 }: ControlCenterProps) {
-  const [wifiEnabled, setWifiEnabled] = useState(true)
-  const [bluetoothEnabled, setBluetoothEnabled] = useState(true)
-  const [volume, setVolume] = useState(75)
-  const [isFullscreen, setIsFullscreen] = useState(false)
+  const [wifiEnabled, setWifiEnabled] = useState(() => {
+    if (typeof window === "undefined") return true;
+    const savedWifi = window.localStorage.getItem(STORAGE_KEYS.wifiEnabled);
+    if (savedWifi === null) return true;
+    return savedWifi === "true";
+  });
+  const [bluetoothEnabled, setBluetoothEnabled] = useState(true);
+  const [volume, setVolume] = useState<number>(
+    CONTROL_CENTER_CONFIG.defaultVolume,
+  );
+  const [isFullscreen, setIsFullscreen] = useState(() => {
+    if (typeof document === "undefined") return false;
+    return !!document.fullscreenElement;
+  });
 
-  // Load WiFi state from localStorage
+  // Track fullscreen mode
   useEffect(() => {
-    const savedWifi = localStorage.getItem("wifiEnabled")
-    if (savedWifi !== null) {
-      setWifiEnabled(savedWifi === "true")
-    }
-
-    // Check if we're in fullscreen mode
-    setIsFullscreen(!!document.fullscreenElement)
-
     // Add fullscreen change event listener
     const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement)
-    }
+      setIsFullscreen(!!document.fullscreenElement);
+    };
 
-    document.addEventListener("fullscreenchange", handleFullscreenChange)
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
 
     return () => {
-      document.removeEventListener("fullscreenchange", handleFullscreenChange)
-    }
-  }, [])
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, []);
 
   // Update the Control Center to store WiFi state in localStorage
   const toggleWifi = () => {
-    const newState = !wifiEnabled
-    setWifiEnabled(newState)
-    localStorage.setItem("wifiEnabled", newState.toString())
-  }
+    const newState = !wifiEnabled;
+    setWifiEnabled(newState);
+    localStorage.setItem(STORAGE_KEYS.wifiEnabled, newState.toString());
+  };
 
   // Toggle fullscreen mode
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch((err) => {
-        console.error(`Error attempting to enable fullscreen: ${err.message}`)
-      })
+        console.error(`Error attempting to enable fullscreen: ${err.message}`);
+      });
     } else {
       if (document.exitFullscreen) {
-        document.exitFullscreen()
+        document.exitFullscreen();
       }
     }
-  }
+  };
 
   return (
     <div
       className="fixed top-8 right-4 w-80 bg-gray-800/80 backdrop-blur-xl rounded-xl overflow-hidden shadow-2xl z-40"
-      onClick={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
     >
       <div className="p-4">
         <div className="grid grid-cols-4 gap-3 mb-4">
@@ -98,8 +108,14 @@ export default function ControlCenter({
             }`}
             onClick={onToggleDarkMode}
           >
-            {isDarkMode ? <Moon className="w-6 h-6 text-white mb-1" /> : <Sun className="w-6 h-6 text-white mb-1" />}
-            <span className="text-white text-xs">{isDarkMode ? "Dark" : "Light"}</span>
+            {isDarkMode ? (
+              <Moon className="w-6 h-6 text-white mb-1" />
+            ) : (
+              <Sun className="w-6 h-6 text-white mb-1" />
+            )}
+            <span className="text-white text-xs">
+              {isDarkMode ? "Dark" : "Light"}
+            </span>
           </button>
 
           <button
@@ -109,7 +125,9 @@ export default function ControlCenter({
             onClick={toggleFullscreen}
           >
             <Maximize className="w-6 h-6 text-white mb-1" />
-            <span className="text-white text-xs">{isFullscreen ? "Exit" : "Fullscreen"}</span>
+            <span className="text-white text-xs">
+              {isFullscreen ? "Exit" : "Fullscreen"}
+            </span>
           </button>
         </div>
 
@@ -120,10 +138,10 @@ export default function ControlCenter({
           </div>
           <input
             type="range"
-            min="10"
-            max="100"
+            min={CONTROL_CENTER_CONFIG.brightnessMin}
+            max={CONTROL_CENTER_CONFIG.brightnessMax}
             value={brightness}
-            onChange={(e) => onBrightnessChange(Number.parseInt(e.target.value))}
+            onChange={(e) => onBrightnessChange(Number(e.target.value))}
             className="w-full h-1 bg-gray-600 rounded-full appearance-none cursor-pointer"
           />
         </div>
@@ -144,12 +162,12 @@ export default function ControlCenter({
               min="0"
               max="100"
               value={volume}
-              onChange={(e) => setVolume(Number.parseInt(e.target.value))}
+              onChange={(e) => setVolume(Number(e.target.value))}
               className="flex-1 h-1 bg-gray-600 rounded-full appearance-none cursor-pointer"
             />
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }

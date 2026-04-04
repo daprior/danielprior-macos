@@ -1,71 +1,86 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import type { AppWindow } from "@/types"
+import { useState, useMemo } from "react";
+import Image from "next/image";
+import type { AppWindow } from "@/types";
+import { LAUNCHPAD_APPS, type AppRegistryItem } from "@/constant/apps-registry";
+import {
+  ANIMATION_DELAYS_MS,
+  APP_WINDOW_DEFAULT_SIZE,
+  APP_WINDOW_POSITION_RANGE,
+} from "@/constant/window-config";
 
-// Same apps as dock, except launchpad itself
-const launchpadApps = [
-  { id: "safari", title: "Safari", icon: "/safari.png", component: "Safari" },
-  { id: "mail", title: "Mail", icon: "/mail.png", component: "Mail" },
-  { id: "vscode", title: "VS Code", icon: "/vscode.png", component: "VSCode" },
-  { id: "notes", title: "Notes", icon: "/notes.png", component: "Notes" },
-  { id: "facetime", title: "FaceTime", icon: "/facetime.png", component: "FaceTime" },
-  { id: "terminal", title: "Terminal", icon: "/terminal.png", component: "Terminal" },
-  { id: "github", title: "GitHub", icon: "/github.png", component: "GitHub" },
-  { id: "youtube", title: "YouTube", icon: "/youtube.png", component: "YouTube" },
-  { id: "spotify", title: "Spotify", icon: "/spotify.png", component: "Spotify" },
-  { id: "snake", title: "Snake", icon: "/snake.png", component: "Snake" },
-  { id: "weather", title: "Weather", icon: "/weather.png", component: "Weather" },
-]
+const hashString = (input: string) => {
+  let hash = 0;
+  for (let i = 0; i < input.length; i++) {
+    hash = (hash * 31 + input.charCodeAt(i)) >>> 0;
+  }
+  return hash;
+};
+
+const getWindowPosition = (seed: string) => {
+  const xRange =
+    APP_WINDOW_POSITION_RANGE.xMax - APP_WINDOW_POSITION_RANGE.xMin;
+  const yRange =
+    APP_WINDOW_POSITION_RANGE.yMax - APP_WINDOW_POSITION_RANGE.yMin;
+
+  const xUnit = (hashString(`${seed}:x`) % 1000) / 1000;
+  const yUnit = (hashString(`${seed}:y`) % 1000) / 1000;
+
+  return {
+    x: APP_WINDOW_POSITION_RANGE.xMin + xUnit * xRange,
+    y: APP_WINDOW_POSITION_RANGE.yMin + yUnit * yRange,
+  };
+};
 
 interface LaunchpadProps {
-  onAppClick: (app: AppWindow) => void
-  onClose: () => void
+  onAppClick: (app: AppWindow) => void;
+  onClose: () => void;
 }
 
 // Improve Launchpad appearance
 export default function Launchpad({ onAppClick, onClose }: LaunchpadProps) {
-  const [searchTerm, setSearchTerm] = useState("")
-  const [filteredApps, setFilteredApps] = useState(launchpadApps)
-  const [isVisible, setIsVisible] = useState(false)
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isVisible, setIsVisible] = useState(true);
 
-  useEffect(() => {
-    // Animation effect
-    setIsVisible(true)
+  const filteredApps = useMemo(() => {
+    if (!searchTerm) return LAUNCHPAD_APPS;
+    return LAUNCHPAD_APPS.filter((app) =>
+      app.title.toLowerCase().includes(searchTerm.toLowerCase()),
+    );
+  }, [searchTerm]);
 
-    if (searchTerm) {
-      setFilteredApps(launchpadApps.filter((app) => app.title.toLowerCase().includes(searchTerm.toLowerCase())))
-    } else {
-      setFilteredApps(launchpadApps)
-    }
-  }, [searchTerm])
+  const handleAppClick = (app: AppRegistryItem) => {
+    const position = getWindowPosition(app.id);
 
-  const handleAppClick = (app: (typeof launchpadApps)[0]) => {
     onAppClick({
       id: app.id,
       title: app.title,
       component: app.component,
-      position: { x: Math.random() * 200 + 100, y: Math.random() * 100 + 50 },
-      size: { width: 800, height: 600 },
-    })
-    onClose()
-  }
+      position,
+      size: {
+        width: APP_WINDOW_DEFAULT_SIZE.width,
+        height: APP_WINDOW_DEFAULT_SIZE.height,
+      },
+    });
+    onClose();
+  };
 
   const handleClose = () => {
-    setIsVisible(false)
-    setTimeout(onClose, 300) // Wait for animation to complete
-  }
+    setIsVisible(false);
+    setTimeout(onClose, ANIMATION_DELAYS_MS.launchpadClose);
+  };
 
   return (
     <div
       className={`fixed inset-0 bg-black/40 backdrop-blur-md z-40 flex flex-col items-center justify-center
         transition-opacity duration-300 ${isVisible ? "opacity-100" : "opacity-0"}`}
-      onClick={handleClose}
+      onMouseDown={handleClose}
     >
       <div
         className={`w-full max-w-4xl px-8 py-12 transition-transform duration-300 
           ${isVisible ? "translate-y-0" : "translate-y-10"}`}
-        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="relative w-64 mx-auto mb-12">
           <input
@@ -93,19 +108,28 @@ export default function Launchpad({ onAppClick, onClose }: LaunchpadProps) {
 
         <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7 gap-8">
           {filteredApps.map((app) => (
-            <div
+            <button
               key={app.id}
               className="flex flex-col items-center justify-center cursor-pointer group"
               onClick={() => handleAppClick(app)}
+              type="button"
             >
               <div className="w-16 h-16 flex items-center justify-center mb-2 rounded-xl group-hover:bg-white/20 transition-colors">
-                <img src={app.icon || "/placeholder.svg"} alt={app.title} className="w-12 h-12 object-contain" />
+                <Image
+                  src={app.icon || "/placeholder.svg"}
+                  alt={app.title}
+                  width={48}
+                  height={48}
+                  className="w-12 h-12 object-contain"
+                />
               </div>
-              <span className="text-white text-sm text-center">{app.title}</span>
-            </div>
+              <span className="text-white text-sm text-center">
+                {app.title}
+              </span>
+            </button>
           ))}
         </div>
       </div>
     </div>
-  )
+  );
 }

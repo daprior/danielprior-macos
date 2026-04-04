@@ -1,24 +1,27 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useRef, useEffect } from "react"
-import { X, Minus, ArrowRightIcon as ArrowsMaximize } from "lucide-react"
-import type { AppWindow } from "@/types"
-import Notes from "@/components/apps/notes"
-import GitHub from "@/components/apps/github"
-import Safari from "@/components/apps/safari"
-import VSCode from "@/components/apps/vscode"
-import FaceTime from "@/components/apps/facetime"
-import Terminal from "@/components/apps/terminal"
-import Mail from "@/components/apps/mail"
-import YouTube from "@/components/apps/youtube"
-import Spotify from "@/components/apps/spotify"
-import Snake from "@/components/apps/snake"
-import Weather from "@/components/apps/weather"
+import { useState, useRef, useEffect } from "react";
+import { X, Minus, ArrowRightIcon as ArrowsMaximize } from "lucide-react";
+import type { AppWindow } from "@/types";
+import Notes from "@/components/apps/notes";
+import GitHub from "@/components/apps/github";
+import Safari from "@/components/apps/safari";
+import VSCode from "@/components/apps/vscode";
+import FaceTime from "@/components/apps/facetime";
+import Terminal from "@/components/apps/terminal";
+import Mail from "@/components/apps/mail";
+import YouTube from "@/components/apps/youtube";
+import Spotify from "@/components/apps/spotify";
+import Snake from "@/components/apps/snake";
+import Weather from "@/components/apps/weather";
+import { WINDOW_MIN_SIZE } from "@/constant/window-config";
 
-
-const componentMap: Record<string, React.ComponentType<{ isDarkMode?: boolean }>> = {
+const componentMap: Record<
+  string,
+  React.ComponentType<{ isDarkMode?: boolean }>
+> = {
   Notes,
   GitHub,
   Safari,
@@ -30,31 +33,40 @@ const componentMap: Record<string, React.ComponentType<{ isDarkMode?: boolean }>
   Spotify,
   Snake,
   Weather,
-}
+};
 
 interface WindowProps {
-  window: AppWindow
-  isActive: boolean
-  onClose: () => void
-  onFocus: () => void
-  isDarkMode: boolean
+  window: AppWindow;
+  isActive: boolean;
+  onClose: () => void;
+  onFocus: () => void;
+  isDarkMode: boolean;
 }
 
-export default function Window({ window, isActive, onClose, onFocus, isDarkMode }: WindowProps) {
-  const [position, setPosition] = useState(window.position)
-  const [size, setSize] = useState(window.size)
-  const [isDragging, setIsDragging] = useState(false)
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
-  const [isMaximized, setIsMaximized] = useState(false)
-  const [preMaximizeState, setPreMaximizeState] = useState({ position, size })
-  const [isResizing, setIsResizing] = useState(false)
-  const [resizeDirection, setResizeDirection] = useState<string | null>(null)
-  const [resizeStartPos, setResizeStartPos] = useState({ x: 0, y: 0 })
-  const [resizeStartSize, setResizeStartSize] = useState({ width: 0, height: 0 })
+export default function Window({
+  window: appWindow,
+  isActive,
+  onClose,
+  onFocus,
+  isDarkMode,
+}: WindowProps) {
+  const [position, setPosition] = useState(appWindow.position);
+  const [size, setSize] = useState(appWindow.size);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [isMaximized, setIsMaximized] = useState(false);
+  const [preMaximizeState, setPreMaximizeState] = useState({ position, size });
+  const [isResizing, setIsResizing] = useState(false);
+  const [resizeDirection, setResizeDirection] = useState<string | null>(null);
+  const [resizeStartPos, setResizeStartPos] = useState({ x: 0, y: 0 });
+  const [resizeStartSize, setResizeStartSize] = useState({
+    width: 0,
+    height: 0,
+  });
 
-  const windowRef = useRef<HTMLDivElement>(null)
+  const windowRef = useRef<HTMLDivElement>(null);
 
-  const AppComponent = componentMap[window.component]
+  const AppComponent = componentMap[appWindow.component];
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -62,128 +74,136 @@ export default function Window({ window, isActive, onClose, onFocus, isDarkMode 
         setPosition({
           x: e.clientX - dragOffset.x,
           y: e.clientY - dragOffset.y,
-        })
+        });
       } else if (isResizing && resizeDirection) {
-        e.preventDefault()
-        const dx = e.clientX - resizeStartPos.x
-        const dy = e.clientY - resizeStartPos.y
+        e.preventDefault();
+        const dx = e.clientX - resizeStartPos.x;
+        const dy = e.clientY - resizeStartPos.y;
 
-        let newWidth = resizeStartSize.width
-        let newHeight = resizeStartSize.height
-        let newX = position.x
-        let newY = position.y
+        let newWidth = resizeStartSize.width;
+        let newHeight = resizeStartSize.height;
+        let newX = position.x;
+        let newY = position.y;
 
         // Minimum window dimensions
-        const minWidth = 300
-        const minHeight = 200
+        const minWidth = WINDOW_MIN_SIZE.width;
+        const minHeight = WINDOW_MIN_SIZE.height;
 
         if (resizeDirection.includes("e")) {
-          newWidth = Math.max(minWidth, resizeStartSize.width + dx)
+          newWidth = Math.max(minWidth, resizeStartSize.width + dx);
         }
         if (resizeDirection.includes("s")) {
-          newHeight = Math.max(minHeight, resizeStartSize.height + dy)
+          newHeight = Math.max(minHeight, resizeStartSize.height + dy);
         }
         if (resizeDirection.includes("w")) {
-          const proposedWidth = resizeStartSize.width - dx
+          const proposedWidth = resizeStartSize.width - dx;
           if (proposedWidth >= minWidth) {
-            newWidth = proposedWidth
-            newX = position.x + dx
+            newWidth = proposedWidth;
+            newX = position.x + dx;
           }
         }
         if (resizeDirection.includes("n")) {
-          const proposedHeight = resizeStartSize.height - dy
+          const proposedHeight = resizeStartSize.height - dy;
           if (proposedHeight >= minHeight) {
-            newHeight = proposedHeight
-            newY = position.y + dy
+            newHeight = proposedHeight;
+            newY = position.y + dy;
           }
         }
 
-        setSize({ width: newWidth, height: newHeight })
+        setSize({ width: newWidth, height: newHeight });
         if (resizeDirection.includes("w") || resizeDirection.includes("n")) {
-          setPosition({ x: newX, y: newY })
+          setPosition({ x: newX, y: newY });
         }
       }
-    }
+    };
 
     const handleMouseUp = () => {
-      setIsDragging(false)
-      setIsResizing(false)
-      setResizeDirection(null)
-    }
+      setIsDragging(false);
+      setIsResizing(false);
+      setResizeDirection(null);
+    };
 
     if (isDragging || isResizing) {
-      document.addEventListener("mousemove", handleMouseMove)
-      document.addEventListener("mouseup", handleMouseUp)
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
     }
 
     return () => {
-      document.removeEventListener("mousemove", handleMouseMove)
-      document.removeEventListener("mouseup", handleMouseUp)
-    }
-  }, [isDragging, dragOffset, isResizing, resizeDirection, resizeStartPos, resizeStartSize, position])
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [
+    isDragging,
+    dragOffset,
+    isResizing,
+    resizeDirection,
+    resizeStartPos,
+    resizeStartSize,
+    position,
+  ]);
 
   const handleTitleBarMouseDown = (e: React.MouseEvent) => {
-    if (isMaximized) return
+    if (isMaximized) return;
 
     // Prevent dragging when clicking on buttons
     if ((e.target as HTMLElement).closest(".window-controls")) {
-      return
+      return;
     }
 
-    setIsDragging(true)
+    setIsDragging(true);
     setDragOffset({
       x: e.clientX - position.x,
       y: e.clientY - position.y,
-    })
+    });
 
-    onFocus()
-  }
+    onFocus();
+  };
 
   const handleResizeMouseDown = (e: React.MouseEvent, direction: string) => {
-    e.preventDefault()
-    e.stopPropagation()
+    e.preventDefault();
+    e.stopPropagation();
 
-    setIsResizing(true)
-    setResizeDirection(direction)
+    setIsResizing(true);
+    setResizeDirection(direction);
     setResizeStartPos({
       x: e.clientX,
       y: e.clientY,
-    })
+    });
     setResizeStartSize({
       width: size.width,
       height: size.height,
-    })
+    });
 
-    onFocus()
-  }
+    onFocus();
+  };
 
   const toggleMaximize = () => {
     if (isMaximized) {
       // Restore previous state
-      setPosition(preMaximizeState.position)
-      setSize(preMaximizeState.size)
+      setPosition(preMaximizeState.position);
+      setSize(preMaximizeState.size);
     } else {
       // Save current state before maximizing
-      setPreMaximizeState({ position, size })
+      setPreMaximizeState({ position, size });
 
       // Get the available space (accounting for menubar)
-      const availableHeight = window.innerHeight - 26 // 6px for menubar + 20px padding
+      const availableHeight = window.innerHeight - 26; // 6px for menubar + 20px padding
 
       // Maximize
-      setPosition({ x: 0, y: 26 }) // Position below menubar
+      setPosition({ x: 0, y: 26 }); // Position below menubar
       setSize({
         width: window.innerWidth,
         height: availableHeight - 70, // Account for dock
-      })
+      });
     }
 
-    setIsMaximized(!isMaximized)
-  }
+    setIsMaximized(!isMaximized);
+  };
 
   // Make minimize do the same as close
   const handleMinimize = () => {
-    onClose()
-  }
+    onClose();
+  };
 
   const titleBarClass = isDarkMode
     ? isActive
@@ -191,11 +211,10 @@ export default function Window({ window, isActive, onClose, onFocus, isDarkMode 
       : "bg-gray-900"
     : isActive
       ? "bg-gray-200"
-      : "bg-gray-100"
+      : "bg-gray-100";
 
-  const contentBgClass = isDarkMode ? "bg-gray-900" : "bg-white"
-  const textClass = isDarkMode ? "text-white" : "text-gray-800"
-  const resizeBorderClass = isDarkMode ? "border-gray-700" : "border-gray-300"
+  const contentBgClass = isDarkMode ? "bg-gray-900" : "bg-white";
+  const textClass = isDarkMode ? "text-white" : "text-gray-800";
 
   return (
     <div
@@ -207,10 +226,13 @@ export default function Window({ window, isActive, onClose, onFocus, isDarkMode 
         width: `${size.width}px`,
         height: `${size.height}px`,
       }}
-      onClick={onFocus}
+      onMouseDown={onFocus}
     >
       {/* Title bar */}
-      <div className={`h-8 flex items-center px-3 ${titleBarClass}`} onMouseDown={handleTitleBarMouseDown}>
+      <div
+        className={`h-8 flex items-center px-3 ${titleBarClass}`}
+        onMouseDown={handleTitleBarMouseDown}
+      >
         <div className="window-controls flex items-center space-x-2 mr-4">
           <button
             className="w-3 h-3 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center"
@@ -232,14 +254,22 @@ export default function Window({ window, isActive, onClose, onFocus, isDarkMode 
           </button>
         </div>
 
-        <div className={`flex-1 text-center text-sm font-medium truncate ${textClass}`}>{window.title}</div>
+        <div
+          className={`flex-1 text-center text-sm font-medium truncate ${textClass}`}
+        >
+          {appWindow.title}
+        </div>
 
         <div className="w-16">{/* Spacer to balance the title */}</div>
       </div>
 
       {/* Window content */}
       <div className={`${contentBgClass} h-[calc(100%-2rem)] overflow-auto`}>
-        {AppComponent ? <AppComponent isDarkMode={isDarkMode} /> : <div className="p-4">Content not available</div>}
+        {AppComponent ? (
+          <AppComponent isDarkMode={isDarkMode} />
+        ) : (
+          <div className="p-4">Content not available</div>
+        )}
       </div>
 
       {/* Resize handles */}
@@ -283,5 +313,5 @@ export default function Window({ window, isActive, onClose, onFocus, isDarkMode 
         </>
       )}
     </div>
-  )
+  );
 }

@@ -64,6 +64,24 @@ yarn dev
 ```
 4. Open [http://localhost:3000](http://localhost:3000) in your browser to see the result.
 
+## ✅ Linting
+
+- Run lint (fails on warnings):
+
+```bash
+npm run lint -- --max-warnings 0
+```
+
+- Auto-fix (formatting + some rule fixes):
+
+```bash
+npm run lint -- --fix
+```
+
+## 📌 Primary Changes Notes
+
+See [docs/primary-changes.md](docs/primary-changes.md) for a summary of the primary repo changes (new dev deps, lint script change, and the main React/TypeScript refactors).
+
 ## 🎨 Customization
 
 ### Personal Information

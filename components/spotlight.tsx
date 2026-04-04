@@ -1,83 +1,107 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useRef } from "react"
-import type { AppWindow } from "@/types"
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import Image from "next/image";
+import type { AppWindow } from "@/types";
+import { SPOTLIGHT_APPS, type AppRegistryItem } from "@/constant/apps-registry";
+import {
+  APP_WINDOW_DEFAULT_SIZE,
+  APP_WINDOW_POSITION_RANGE,
+} from "@/constant/window-config";
 
-const spotlightApps = [
-  { id: "safari", title: "Safari", icon: "/safari.png", component: "Safari" },
-  { id: "mail", title: "Mail", icon: "/mail.png", component: "Mail" },
-  { id: "vscode", title: "VS Code", icon: "/vscode.png", component: "VSCode" },
-  { id: "notes", title: "Notes", icon: "/notes.png", component: "Notes" },
-  { id: "facetime", title: "FaceTime", icon: "/facetime.png", component: "FaceTime" },
-  { id: "terminal", title: "Terminal", icon: "/terminal.png", component: "Terminal" },
-  { id: "github", title: "GitHub", icon: "/github.png", component: "GitHub" },
-  { id: "youtube", title: "YouTube", icon: "/youtube.png", component: "YouTube" },
-  { id: "spotify", title: "Spotify", icon: "/spotify.png", component: "Spotify" },
-  { id: "snake", title: "Snake", icon: "/snake.png", component: "Snake" },
-  { id: "weather", title: "Weather", icon: "/weather.png", component: "Weather" },
-]
+const hashString = (input: string) => {
+  let hash = 0;
+  for (let i = 0; i < input.length; i++) {
+    hash = (hash * 31 + input.charCodeAt(i)) >>> 0;
+  }
+  return hash;
+};
+
+const getWindowPosition = (seed: string) => {
+  const xRange =
+    APP_WINDOW_POSITION_RANGE.xMax - APP_WINDOW_POSITION_RANGE.xMin;
+  const yRange =
+    APP_WINDOW_POSITION_RANGE.yMax - APP_WINDOW_POSITION_RANGE.yMin;
+
+  const xUnit = (hashString(`${seed}:x`) % 1000) / 1000;
+  const yUnit = (hashString(`${seed}:y`) % 1000) / 1000;
+
+  return {
+    x: APP_WINDOW_POSITION_RANGE.xMin + xUnit * xRange,
+    y: APP_WINDOW_POSITION_RANGE.yMin + yUnit * yRange,
+  };
+};
 
 interface SpotlightProps {
-  onClose: () => void
-  onAppClick: (app: AppWindow) => void
+  onClose: () => void;
+  onAppClick: (app: AppWindow) => void;
 }
 
 export default function Spotlight({ onClose, onAppClick }: SpotlightProps) {
-  const [searchTerm, setSearchTerm] = useState("")
-  const [filteredApps, setFilteredApps] = useState(spotlightApps)
-  const [selectedIndex, setSelectedIndex] = useState(0)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const filteredApps = useMemo(() => {
+    if (!searchTerm) return SPOTLIGHT_APPS;
+    return SPOTLIGHT_APPS.filter((app) =>
+      app.title.toLowerCase().includes(searchTerm.toLowerCase()),
+    );
+  }, [searchTerm]);
+
+  const handleAppClick = useCallback(
+    (app: AppRegistryItem) => {
+      const position = getWindowPosition(app.id);
+
+      onAppClick({
+        id: app.id,
+        title: app.title,
+        component: app.component,
+        position,
+        size: {
+          width: APP_WINDOW_DEFAULT_SIZE.width,
+          height: APP_WINDOW_DEFAULT_SIZE.height,
+        },
+      });
+      onClose();
+    },
+    [onAppClick, onClose],
+  );
 
   useEffect(() => {
     // Focus the input when spotlight opens
-    inputRef.current?.focus()
+    inputRef.current?.focus();
 
     // Handle escape key to close
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        onClose()
+        onClose();
       } else if (e.key === "ArrowDown") {
-        setSelectedIndex((prev) => (prev < filteredApps.length - 1 ? prev + 1 : prev))
-        e.preventDefault()
+        setSelectedIndex((prev) =>
+          prev < filteredApps.length - 1 ? prev + 1 : prev,
+        );
+        e.preventDefault();
       } else if (e.key === "ArrowUp") {
-        setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev))
-        e.preventDefault()
+        setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
+        e.preventDefault();
       } else if (e.key === "Enter" && filteredApps.length > 0) {
-        handleAppClick(filteredApps[selectedIndex])
-        e.preventDefault()
+        handleAppClick(filteredApps[selectedIndex]);
+        e.preventDefault();
       }
-    }
+    };
 
-    window.addEventListener("keydown", handleKeyDown)
-    return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [filteredApps, selectedIndex])
-
-  useEffect(() => {
-    if (searchTerm) {
-      const filtered = spotlightApps.filter((app) => app.title.toLowerCase().includes(searchTerm.toLowerCase()))
-      setFilteredApps(filtered)
-      setSelectedIndex(0) // Reset selection when search changes
-    } else {
-      setFilteredApps(spotlightApps)
-    }
-  }, [searchTerm])
-
-  const handleAppClick = (app: (typeof spotlightApps)[0]) => {
-    onAppClick({
-      id: app.id,
-      title: app.title,
-      component: app.component,
-      position: { x: Math.random() * 200 + 100, y: Math.random() * 100 + 50 },
-      size: { width: 800, height: 600 },
-    })
-    onClose()
-  }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [filteredApps, selectedIndex, handleAppClick, onClose]);
 
   return (
-    <div className="fixed inset-0 bg-transparent z-40 flex items-center justify-center" onClick={onClose}>
+    <div
+      className="fixed inset-0 bg-transparent z-40 flex items-center justify-center"
+      onMouseDown={onClose}
+    >
       <div
         className="w-full max-w-2xl bg-gray-800/80 backdrop-blur-xl rounded-xl overflow-hidden shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="relative">
           <svg
@@ -100,15 +124,19 @@ export default function Spotlight({ onClose, onAppClick }: SpotlightProps) {
             placeholder="Search"
             className="w-full bg-transparent text-white border-0 py-4 pl-12 pr-4 focus:outline-none text-lg"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setSelectedIndex(0);
+            }}
           />
         </div>
 
         {filteredApps.length > 0 && (
           <div className="max-h-80 overflow-y-auto">
             {filteredApps.map((app, index) => (
-              <div
+              <button
                 key={app.id}
+                type="button"
                 className={`flex items-center px-4 py-3 cursor-pointer ${
                   index === selectedIndex ? "bg-blue-500" : "hover:bg-gray-700"
                 }`}
@@ -116,14 +144,20 @@ export default function Spotlight({ onClose, onAppClick }: SpotlightProps) {
                 onMouseEnter={() => setSelectedIndex(index)}
               >
                 <div className="w-8 h-8 flex items-center justify-center mr-3">
-                  <img src={app.icon || "/placeholder.svg"} alt={app.title} className="w-6 h-6 object-contain" />
+                  <Image
+                    src={app.icon || "/placeholder.svg"}
+                    alt={app.title}
+                    width={24}
+                    height={24}
+                    className="w-6 h-6 object-contain"
+                  />
                 </div>
                 <span className="text-white">{app.title}</span>
-              </div>
+              </button>
             ))}
           </div>
         )}
       </div>
     </div>
-  )
+  );
 }

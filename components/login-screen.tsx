@@ -3,10 +3,9 @@
 import type React from "react";
 
 import { useState, useEffect } from "react";
-import { User, Moon, Sun } from "lucide-react";
+import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import Image from "next/image";
 
 interface LoginScreenProps {
   onLogin: () => void;

@@ -1,37 +1,44 @@
-"use client"
+"use client";
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef } from "react";
+import Image from "next/image";
+import { YOUTUBE_CHANNEL_URL } from "@/constant/media-links";
 
 interface YouTubeProps {
-  isDarkMode?: boolean
+  isDarkMode?: boolean;
 }
 
 export default function YouTube({ isDarkMode = true }: YouTubeProps) {
-  const textColor = isDarkMode ? "text-white" : "text-gray-800"
-  const bgColor = isDarkMode ? "bg-gray-900" : "bg-white"
-  const hasOpenedRef = useRef(false)
+  const textColor = isDarkMode ? "text-white" : "text-gray-800";
+  const bgColor = isDarkMode ? "bg-gray-900" : "bg-white";
+  const hasOpenedRef = useRef(false);
 
   // Open YouTube channel when the app is opened
   useEffect(() => {
     // Only open once
     if (!hasOpenedRef.current) {
-      hasOpenedRef.current = true
-
-      // Your YouTube channel URL
-      const youtubeUrl = "https://www.youtube.com/@DanielPrior0"
+      hasOpenedRef.current = true;
 
       // Open in new tab
-      window.open(youtubeUrl, "_blank")
+      window.open(YOUTUBE_CHANNEL_URL, "_blank");
     }
-  }, [])
+  }, []);
 
   return (
-    <div className={`h-full ${bgColor} ${textColor} p-6 flex items-center justify-center`}>
+    <div
+      className={`h-full ${bgColor} ${textColor} p-6 flex items-center justify-center`}
+    >
       <div className="text-center">
-        <img src="/youtube.png" alt="YouTube" className="w-16 h-16 mx-auto mb-4 object-contain" />
+        <Image
+          src="/youtube.png"
+          alt="YouTube"
+          width={64}
+          height={64}
+          className="mx-auto mb-4 object-contain"
+        />
         <h2 className="text-xl font-semibold mb-2">Opening YouTube...</h2>
         <p>Redirecting to your YouTube channel</p>
       </div>
     </div>
-  )
+  );
 }

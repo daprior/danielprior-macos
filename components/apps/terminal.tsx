@@ -1,98 +1,96 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect } from "react";
 
 interface TerminalProps {
-  isDarkMode?: boolean
+  isDarkMode?: boolean;
 }
 
-export default function Terminal({ isDarkMode = true }: TerminalProps) {
-  const [input, setInput] = useState("")
-  const [history, setHistory] = useState<string[]>([])
-  const [commandHistory, setCommandHistory] = useState<string[]>([])
-  const [historyIndex, setHistoryIndex] = useState(-1)
-  const inputRef = useRef<HTMLInputElement>(null)
-  const terminalRef = useRef<HTMLDivElement>(null)
+export default function Terminal({ isDarkMode }: TerminalProps) {
+  void isDarkMode;
+  const [input, setInput] = useState("");
+  const [history, setHistory] = useState<string[]>(() => [
+    `Last login: ${new Date().toLocaleString()}`,
+    "Welcome to macOS Terminal",
+    "Type 'help' to see available commands",
+    "",
+  ]);
+  const [commandHistory, setCommandHistory] = useState<string[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const terminalRef = useRef<HTMLDivElement>(null);
 
   // Terminal is always dark
-  const bgColor = "bg-black"
-  const textColor = "text-green-400"
+  const bgColor = "bg-black";
+  const textColor = "text-green-400";
 
   useEffect(() => {
     // Focus input when terminal is clicked
     const handleClick = () => {
-      inputRef.current?.focus()
-    }
+      inputRef.current?.focus();
+    };
 
-    const terminal = terminalRef.current
+    const terminal = terminalRef.current;
     if (terminal) {
-      terminal.addEventListener("click", handleClick)
-
-      // Initial welcome message
-      setHistory([
-        "Last login: " + new Date().toLocaleString(),
-        "Welcome to macOS Terminal",
-        "Type 'help' to see available commands",
-        "",
-      ])
+      terminal.addEventListener("click", handleClick);
     }
 
     return () => {
       if (terminal) {
-        terminal.removeEventListener("click", handleClick)
+        terminal.removeEventListener("click", handleClick);
       }
-    }
-  }, [])
+    };
+  }, []);
 
   useEffect(() => {
     // Scroll to bottom when history changes
     if (terminalRef.current) {
-      terminalRef.current.scrollTop = terminalRef.current.scrollHeight
+      terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
     }
-  }, [history])
+  }, [history]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInput(e.target.value)
-  }
+    setInput(e.target.value);
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && input.trim()) {
-      executeCommand(input)
-      setCommandHistory((prev) => [...prev, input])
-      setHistoryIndex(-1)
-      setInput("")
+      executeCommand(input);
+      setCommandHistory((prev) => [...prev, input]);
+      setHistoryIndex(-1);
+      setInput("");
     } else if (e.key === "ArrowUp") {
-      e.preventDefault()
-      navigateHistory(-1)
+      e.preventDefault();
+      navigateHistory(-1);
     } else if (e.key === "ArrowDown") {
-      e.preventDefault()
-      navigateHistory(1)
+      e.preventDefault();
+      navigateHistory(1);
     }
-  }
+  };
 
   const navigateHistory = (direction: number) => {
-    if (commandHistory.length === 0) return
+    if (commandHistory.length === 0) return;
 
-    const newIndex = historyIndex + direction
+    const newIndex = historyIndex + direction;
 
     if (newIndex >= commandHistory.length) {
-      setHistoryIndex(-1)
-      setInput("")
+      setHistoryIndex(-1);
+      setInput("");
     } else if (newIndex >= 0) {
-      setHistoryIndex(newIndex)
-      setInput(commandHistory[commandHistory.length - 1 - newIndex])
+      setHistoryIndex(newIndex);
+      setInput(commandHistory[commandHistory.length - 1 - newIndex]);
     }
-  }
+  };
 
   const executeCommand = (cmd: string) => {
-    const command = cmd.trim().toLowerCase()
-    const args = command.split(" ")
-    const mainCommand = args[0]
+    const command = cmd.trim().toLowerCase();
+    const args = command.split(" ");
+    const mainCommand = args[0];
 
     // Add command to history
-    setHistory((prev) => [...prev, `daniel@macbook-pro ~ $ ${cmd}`, ""])
+    setHistory((prev) => [...prev, `daniel@macbook-pro ~ $ ${cmd}`, ""]);
 
     // Process command
     switch (mainCommand) {
@@ -110,29 +108,39 @@ export default function Terminal({ isDarkMode = true }: TerminalProps) {
           "  skills - My technical skills",
           "  contact - Contact information",
           "",
-        ])
-        break
+        ]);
+        break;
 
       case "clear":
-        setHistory([""])
-        break
+        setHistory([""]);
+        break;
 
       case "echo":
-        const echoText = args.slice(1).join(" ")
-        setHistory((prev) => [...prev, echoText, ""])
-        break
+        const echoText = args.slice(1).join(" ");
+        setHistory((prev) => [...prev, echoText, ""]);
+        break;
 
       case "date":
-        setHistory((prev) => [...prev, new Date().toString(), ""])
-        break
+        setHistory((prev) => [...prev, new Date().toString(), ""]);
+        break;
 
       case "ls":
-        setHistory((prev) => [...prev, "Documents", "Projects", "Downloads", "Desktop", "Music", "Pictures", "Videos", ""])
-        break
+        setHistory((prev) => [
+          ...prev,
+          "Documents",
+          "Projects",
+          "Downloads",
+          "Desktop",
+          "Music",
+          "Pictures",
+          "Videos",
+          "",
+        ]);
+        break;
 
       case "whoami":
-        setHistory((prev) => [...prev, "daniel", ""])
-        break
+        setHistory((prev) => [...prev, "daniel", ""]);
+        break;
 
       case "about":
         setHistory((prev) => [
@@ -151,54 +159,54 @@ export default function Terminal({ isDarkMode = true }: TerminalProps) {
           "development, and I'm always eager to learn",
           "new skills and improve my craft.",
           "",
-        ])
-        break
+        ]);
+        break;
 
-        case "skills":
-          setHistory((prev) => [
-            ...prev,
-            "┌──────────────┐",
-            "│   Skills     │",
-            "└──────────────┘",
-            "",
-            "Frontend:",
-            "• React / Next.js",
-            "• Vue.js / Nuxt.js",
-            "• TypeScript / JavaScript",
-            "• Tailwind CSS / SCSS",
-            "• UI/UX Design",
-            "• Responsive Web Development",
-            "• Vite / Webpack",
-            "• WordPress, Umbraco etc.",
-            "",
-            "Backend:",
-            "• Node.js / Express",
-            "• PHP / Laravel / Slim",
-            "• Python / Django",
-            "• Rust & Go (learning)",
-            "• SQL (MySQL, PostgreSQL)",
-            "• NoSQL (MongoDB)",
-            "• RESTful APIs / GraphQL",
-            "",
-            "Game Development:",
-            "• Unity / Unreal Engine",
-            "• C# & C++",
-            "• Game Design Principles",
-            "• Game Mechanics & Systems",
-            "• Blender 3D / 3D Modeling",
-            "• Animations for agri machinery & vehicles",
-            "• Godot Engine",
-            "",
-            "DevOps & Tools:",
-            "• Docker / Containerization",
-            "• CI/CD Pipelines",
-            "• Git / GitHub",
-            "• Agile / Scrum Methodologies",
-            "• AWS / Cloud Services",
-            "• Linux / Unix",
-            "",
-          ])
-          break
+      case "skills":
+        setHistory((prev) => [
+          ...prev,
+          "┌──────────────┐",
+          "│   Skills     │",
+          "└──────────────┘",
+          "",
+          "Frontend:",
+          "• React / Next.js",
+          "• Vue.js / Nuxt.js",
+          "• TypeScript / JavaScript",
+          "• Tailwind CSS / SCSS",
+          "• UI/UX Design",
+          "• Responsive Web Development",
+          "• Vite / Webpack",
+          "• WordPress, Umbraco etc.",
+          "",
+          "Backend:",
+          "• Node.js / Express",
+          "• PHP / Laravel / Slim",
+          "• Python / Django",
+          "• Rust & Go (learning)",
+          "• SQL (MySQL, PostgreSQL)",
+          "• NoSQL (MongoDB)",
+          "• RESTful APIs / GraphQL",
+          "",
+          "Game Development:",
+          "• Unity / Unreal Engine",
+          "• C# & C++",
+          "• Game Design Principles",
+          "• Game Mechanics & Systems",
+          "• Blender 3D / 3D Modeling",
+          "• Animations for agri machinery & vehicles",
+          "• Godot Engine",
+          "",
+          "DevOps & Tools:",
+          "• Docker / Containerization",
+          "• CI/CD Pipelines",
+          "• Git / GitHub",
+          "• Agile / Scrum Methodologies",
+          "• AWS / Cloud Services",
+          "• Linux / Unix",
+          "",
+        ]);
+        break;
 
       case "contact":
         setHistory((prev) => [
@@ -212,8 +220,8 @@ export default function Terminal({ isDarkMode = true }: TerminalProps) {
           "LinkedIn: linkedin.com/in/daniel-prior-53a679195/",
           "Website: danielprior.dev",
           "",
-        ])
-        break
+        ]);
+        break;
 
       default:
         setHistory((prev) => [
@@ -221,12 +229,15 @@ export default function Terminal({ isDarkMode = true }: TerminalProps) {
           `Command not found: ${mainCommand}`,
           'Type "help" to see available commands',
           "",
-        ])
+        ]);
     }
-  }
+  };
 
   return (
-    <div ref={terminalRef} className={`h-full ${bgColor} ${textColor} p-4 font-mono text-sm overflow-auto`}>
+    <div
+      ref={terminalRef}
+      className={`h-full ${bgColor} ${textColor} p-4 font-mono text-sm overflow-auto`}
+    >
       {history.map((line, index) => (
         <div key={index} className="whitespace-pre-wrap">
           {line}
@@ -246,5 +257,5 @@ export default function Terminal({ isDarkMode = true }: TerminalProps) {
         />
       </div>
     </div>
-  )
+  );
 }

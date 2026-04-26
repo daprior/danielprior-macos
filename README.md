@@ -6,11 +6,13 @@ A stunning, interactive macOS-inspired portfolio website built with Next.js and 
 [![Next.js](https://img.shields.io/badge/Next.js-13%2B-black)](https://nextjs.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.0-38B2AC)](https://tailwindcss.com/)
 
-![macOS Portfolio Demo](public/macos-portfolio-demo.png)
+![macOS Portfolio Demo](https://res.cloudinary.com/djy5oyivn/image/upload/q_auto/f_auto/v1775839278/macos-demo_ajjcda.png)
+<!-- <img width="1920" height="1080" alt="macos-demo" src="https://github.com/user-attachments/assets/7b1211fb-48a4-48bc-8623-88bb4746c8b3" /> -->
+
 
 ## 👨‍💻 Demo
 
-Demo Link: [http://danielprior.dev](http://danielprior.dev)
+Demo Link: [https://macos.maenababneh.dev](https://macos.maenababneh.dev)
 
 ### ✨ Features
 
@@ -29,10 +31,14 @@ Demo Link: [http://danielprior.dev](http://danielprior.dev)
   - FaceTime (video chat demo)
   - Snake (just for fun)
   - Weather (mock data)
+  - Projects (interactive GitHub portfolio showcase)
 - 🎛️ Working Control Center with brightness and volume controls
 - 🔄 Boot, login, sleep, and shutdown sequences
 - 📱 Almost fully responsive design
 - ⚡ Fast and optimized performance
+- 📦 **Live GitHub Integration** - Draggable project folders that fetch real GitHub data (pinned repositories)
+- 📝 **Markdown README Rendering** - Project READMEs displayed as formatted Markdown with syntax highlighting
+- 🔗 **Interactive Project Cards** - Full project metadata including stars, language, last updated, and links
 
 #### 🚀 Getting Started
 
@@ -46,8 +52,8 @@ Demo Link: [http://danielprior.dev](http://danielprior.dev)
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/daprior/danielprior-macos.git
-cd macos-portfolio
+git clone https://github.com/maenababneh/maenababneh-macos.git
+cd maenababneh-macos
 
 2. Install 
 
@@ -64,6 +70,24 @@ yarn dev
 ```
 4. Open [http://localhost:3000](http://localhost:3000) in your browser to see the result.
 
+## ✅ Linting
+
+- Run lint (fails on warnings):
+
+```bash
+npm run lint -- --max-warnings 0
+```
+
+- Auto-fix (formatting + some rule fixes):
+
+```bash
+npm run lint -- --fix
+```
+
+## 📌 Primary Changes Notes
+
+See [docs/primary-changes.md](docs/primary-changes.md) for a summary of the primary repo changes (new dev deps, lint script change, and the main React/TypeScript refactors).
+
 ## 🎨 Customization
 
 ### Personal Information
@@ -71,7 +95,7 @@ yarn dev
 Edit the following files to customize your portfolio:
 
 - `components/apps/notes.tsx` - Your bio and personal information
-- `components/apps/terminal.tsx` - Custom terminal commands and responses
+- `components/apps/terminal/` - Custom terminal commands, output content, and behavior
 
 ### Social Links
 
@@ -96,6 +120,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Important**: If you use this template for your own portfolio, you must include attribution to the original author. Please keep the attribution in the footer or about section of your site.
 
+Original template by [Daniel Prior](https://github.com/daprior/danielprior-macos)
+
 ## 🙏 Acknowledgments
 
 - Special thanks to [Renovamen](https://github.com/Renovamen/playground-macos) for the original inspiration for this macOS-themed portfolio concept.
@@ -106,14 +132,19 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🤝 Contributing
 
-Contributions, issues, and feature requests are welcome! Feel free to check the [issues page](https://github.com/daprior/danielprior-macos/issues).
+Contributions, issues, and feature requests are welcome! Feel free to check the [issues page](https://github.com/maenababneh/maenababneh-macos/issues).
 
 ## 📧 Contact
 
-Daniel Prior - [mail@danielprior.dk](mailto:mail@danielprior.dk)
+Maen Ababneh - [hi@maenababneh.dev](mailto:hi@maenababneh.dev)
 
-Project Link: [https://github.com/daprior/danielprior-macos](https://github.com/daprior/danielprior-macos)
+- **GitHub**: [github.com/maenababneh](https://github.com/maenababneh)
+- **LinkedIn**: [linkedin.com/in/maenababneh](https://www.linkedin.com/in/maenababneh/)
+- **YouTube**: [@thecompasstech](https://www.youtube.com/@thecompasstech)
+- **Resume**: [/resume.pdf](/resume.pdf)
+
+Project Link: [https://github.com/maenababneh/maenababneh-macos](https://github.com/maenababneh/maenababneh-macos)
 
 ---
 
-<p align="center"><sub>Made with ❤️ by Daniel</sub></p>
+<p align="center"><sub>Made with ❤️ by Maen Ababneh</sub></p>

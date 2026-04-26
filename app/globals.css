@@ -37,3 +37,48 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(156, 163, 175, 0.7);
 }
+
+@keyframes bootFade {
+  0% {
+    opacity: 0;
+  }
+  6% {
+    opacity: 1;
+  }
+  94% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes bootFill {
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+.boot-fade {
+  animation-name: bootFade;
+  animation-duration: var(--boot-fade-duration, 3220ms);
+  animation-timing-function: ease-in-out;
+  animation-fill-mode: forwards;
+}
+
+.boot-fill {
+  animation-name: bootFill;
+  animation-duration: var(--boot-fill-duration, 3000ms);
+  animation-timing-function: ease-in-out;
+  animation-fill-mode: forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boot-fade,
+  .boot-fill {
+    animation: none !important;
+  }
+}

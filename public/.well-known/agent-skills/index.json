@@ -1,0 +1,26 @@
+{
+  "$schema": "https://schemas.agentskills.io/discovery/0.2.0/schema.json",
+  "skills": [
+    {
+      "name": "get_profile_summary",
+      "type": "skill-md",
+      "description": "Returns profile identity and social links.",
+      "url": "https://macos.maenababneh.dev/.well-known/agent-skills/get-profile-summary.md",
+      "digest": "sha256:e573a7d925762b4a6e0da32df3304fd37deb3ca5cad06c8bd02a1bc08e11d2ea"
+    },
+    {
+      "name": "get_featured_projects",
+      "type": "skill-md",
+      "description": "Fetches featured GitHub projects shown in the portfolio.",
+      "url": "https://macos.maenababneh.dev/.well-known/agent-skills/get-featured-projects.md",
+      "digest": "sha256:c666f9227f39b147989131b9913a734653bf8923656bee5d7807339ce773cf42"
+    },
+    {
+      "name": "get_api_catalog_url",
+      "type": "skill-md",
+      "description": "Returns URLs for API discovery resources.",
+      "url": "https://macos.maenababneh.dev/.well-known/agent-skills/get-api-catalog-url.md",
+      "digest": "sha256:c2c9e68f9f6eeff58a3eb42fce0dbfccc1d4ac01fb66628556e9168ba3bb4561"
+    }
+  ]
+}

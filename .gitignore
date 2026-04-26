@@ -25,3 +25,15 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# vscode
+.vscode/
+
+# playwright
+/.playwright-mcp
+
+# .codex
+.codex
+
+# FrameRef cache directory
+/.frameref

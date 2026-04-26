@@ -1,0 +1,28 @@
+{
+  "$schema": "https://modelcontextprotocol.io/schemas/server-card.schema.json",
+  "serverInfo": {
+    "name": "maenababneh-portfolio",
+    "version": "1.0.0",
+    "description": "Discovery metadata and portfolio tools for AI agents."
+  },
+  "transport": {
+    "type": "http",
+    "url": "https://macos.maenababneh.dev/api/mcp"
+  },
+  "capabilities": {
+    "tools": [
+      {
+        "name": "get_profile_summary",
+        "description": "Returns concise profile details and social links."
+      },
+      {
+        "name": "get_featured_projects",
+        "description": "Returns featured GitHub projects from the portfolio API."
+      },
+      {
+        "name": "get_api_catalog_url",
+        "description": "Returns API discovery URLs for this site."
+      }
+    ]
+  }
+}

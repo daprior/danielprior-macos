@@ -1,154 +1,238 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useRef, useEffect } from "react"
-import { MoreHorizontal } from "lucide-react"
-import type { AppWindow } from "@/types"
+import { useState, useRef, useEffect } from "react";
+import Image from "next/image";
+import { MoreHorizontal } from "lucide-react";
+import gsap from "gsap";
+import {
+  DOCK_APPS,
+  LAUNCHPAD_APPS,
+  type AppRegistryItem,
+} from "@/constants/apps-registry";
+import { UI_MOBILE_BREAKPOINT } from "@/constants/ui-config";
+import {
+  APP_WINDOW_DEFAULT_SIZE,
+  APP_WINDOW_POSITION_RANGE,
+} from "@/constants/window-config";
+import { useDesktopStore } from "@/store/useDesktopStore";
+import { useIsDarkMode } from "@/hooks/use-is-dark-mode";
+import { useUISound } from "@/hooks/useUISounds";
 
-// Updated app list with Snake game
-const dockApps = [
-  { id: "launchpad", title: "Launchpad", icon: "/launchpad.png", component: "Launchpad", isSystem: true },
-  { id: "safari", title: "Safari", icon: "/safari.png", component: "Safari" },
-  { id: "mail", title: "Mail", icon: "/mail.png", component: "Mail" },
-  { id: "vscode", title: "VS Code", icon: "/vscode.png", component: "VSCode" },
-  { id: "notes", title: "Notes", icon: "/notes.png", component: "Notes" },
-  { id: "facetime", title: "FaceTime", icon: "/facetime.png", component: "FaceTime" },
-  { id: "terminal", title: "Terminal", icon: "/terminal.png", component: "Terminal" },
-  { id: "github", title: "GitHub", icon: "/github.png", component: "GitHub" },
-  { id: "youtube", title: "YouTube", icon: "/youtube.png", component: "YouTube" },
-  { id: "spotify", title: "Spotify", icon: "/spotify.png", component: "Spotify" },
-]
+const hashString = (input: string) => {
+  let hash = 0;
+  for (let i = 0; i < input.length; i++) {
+    hash = (hash * 31 + input.charCodeAt(i)) >>> 0;
+  }
+  return hash;
+};
 
-interface DockProps {
-  onAppClick: (app: AppWindow) => void
-  onLaunchpadClick: () => void
-  activeAppIds: string[]
-  isDarkMode: boolean
-}
+const getWindowPosition = (seed: string) => {
+  const xRange =
+    APP_WINDOW_POSITION_RANGE.xMax - APP_WINDOW_POSITION_RANGE.xMin;
+  const yRange =
+    APP_WINDOW_POSITION_RANGE.yMax - APP_WINDOW_POSITION_RANGE.yMin;
 
-export default function Dock({ onAppClick, onLaunchpadClick, activeAppIds, isDarkMode }: DockProps) {
-  const [mouseX, setMouseX] = useState<number | null>(null)
-  const dockRef = useRef<HTMLDivElement>(null)
-  const [isMobile, setIsMobile] = useState(false)
-  const [showMobileMenu, setShowMobileMenu] = useState(false)
+  const xUnit = (hashString(`${seed}:x`) % 1000) / 1000;
+  const yUnit = (hashString(`${seed}:y`) % 1000) / 1000;
+
+  return {
+    x: APP_WINDOW_POSITION_RANGE.xMin + xUnit * xRange,
+    y: APP_WINDOW_POSITION_RANGE.yMin + yUnit * yRange,
+  };
+};
+
+type DockProps = {
+  pulseContact?: boolean;
+};
+
+export default function Dock({ pulseContact = false }: DockProps) {
+  const { isDarkMode } = useIsDarkMode();
+  const { playPop } = useUISound();
+
+  const openWindows = useDesktopStore((state) => state.openWindows);
+  const openApp = useDesktopStore((state) => state.openApp);
+  const toggleLaunchpad = useDesktopStore((state) => state.toggleLaunchpad);
+
+  const activeAppIds = openWindows.map((w) => w.id);
+
+  const [mouseX, setMouseX] = useState<number | null>(null);
+  const [dockWidth, setDockWidth] = useState(0);
+  const dockRef = useRef<HTMLDivElement>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
 
   // Check if we're on a mobile device
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768)
-    }
+      setIsMobile(window.innerWidth < UI_MOBILE_BREAKPOINT);
+    };
 
-    checkMobile()
-    window.addEventListener("resize", checkMobile)
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
 
-    return () => window.removeEventListener("resize", checkMobile)
-  }, [])
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   // Close mobile menu when clicking outside
   useEffect(() => {
-    if (!showMobileMenu) return
+    if (!showMobileMenu) return;
 
-    const handleClickOutside = (event: MouseEvent) => {
+    const handleClickOutside = (event: PointerEvent) => {
       if (dockRef.current && !dockRef.current.contains(event.target as Node)) {
-        setShowMobileMenu(false)
+        setShowMobileMenu(false);
       }
-    }
+    };
 
-    document.addEventListener("mousedown", handleClickOutside)
+    document.addEventListener("pointerdown", handleClickOutside);
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
-    }
-  }, [showMobileMenu])
+      document.removeEventListener("pointerdown", handleClickOutside);
+    };
+  }, [showMobileMenu]);
 
-  const handleAppClick = (app: (typeof dockApps)[0]) => {
+  const bounceDockIcon = (appId: string, root: HTMLElement) => {
+    const bounceEl = root.querySelector<HTMLElement>(
+      `[data-dock-bounce-id="${appId}"]`,
+    );
+    if (!bounceEl) return;
+    gsap.killTweensOf(bounceEl);
+    gsap.fromTo(
+      bounceEl,
+      { y: 0 },
+      {
+        y: -10,
+        duration: 0.12,
+        ease: "power2.out",
+        yoyo: true,
+        repeat: 1,
+        clearProps: "transform",
+      },
+    );
+  };
+
+  const handleAppClick = (app: AppRegistryItem, e?: React.MouseEvent) => {
+    if (e?.currentTarget) {
+      bounceDockIcon(app.id, e.currentTarget as HTMLElement);
+    }
+
     if (app.id === "launchpad") {
-      onLaunchpadClick()
-      return
+      toggleLaunchpad();
+      return;
     }
 
-    onAppClick({
+    const position = getWindowPosition(`${app.id}:${activeAppIds.length}`);
+
+    openApp({
       id: app.id,
       title: app.title,
       component: app.component,
-      position: { x: Math.random() * 200 + 100, y: Math.random() * 100 + 50 },
-      size: { width: 800, height: 600 },
-    })
+      position,
+      size: {
+        width: APP_WINDOW_DEFAULT_SIZE.width,
+        height: APP_WINDOW_DEFAULT_SIZE.height,
+      },
+    });
 
     // Close mobile menu after clicking an app
     if (showMobileMenu) {
-      setShowMobileMenu(false)
+      setShowMobileMenu(false);
     }
-  }
+  };
+
+  const handleAppHover = () => {
+    playPop();
+  };
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (dockRef.current && !isMobile) {
-      const rect = dockRef.current.getBoundingClientRect()
-      const x = e.clientX - rect.left
-      setMouseX(x)
+      const rect = dockRef.current.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      setMouseX(x);
+      setDockWidth(rect.width);
     }
-  }
+  };
 
   const handleMouseLeave = () => {
-    setMouseX(null)
-  }
+    setMouseX(null);
+  };
 
   // Calculate scale for each icon based on distance from mouse
   const getIconScale = (index: number, iconCount: number) => {
-    if (mouseX === null || isMobile) return 1
+    if (mouseX === null || isMobile || dockWidth <= 0) return 1;
 
     // Get the dock width and calculate the position of each icon
-    const dockWidth = dockRef.current?.offsetWidth || 0
-    const iconWidth = dockWidth / iconCount
-    const iconPosition = iconWidth * (index + 0.5) // Center of the icon
+    const iconWidth = dockWidth / iconCount;
+    const iconPosition = iconWidth * (index + 0.5); // Center of the icon
 
     // Distance from mouse to icon center
-    const distance = Math.abs(mouseX - iconPosition)
+    const distance = Math.abs(mouseX - iconPosition);
 
     // Maximum scale and distance influence
-    const maxScale = 2
-    const maxDistance = iconWidth * 2.5
+    const maxScale = 2;
+    const maxDistance = iconWidth * 2.5;
 
     // Calculate scale based on distance (closer = larger)
-    if (distance > maxDistance) return 1
+    if (distance > maxDistance) return 1;
 
     // Smooth parabolic scaling function
-    const scale = 1 + (maxScale - 1) * Math.pow(1 - distance / maxDistance, 2)
+    const scale = 1 + (maxScale - 1) * Math.pow(1 - distance / maxDistance, 2);
 
-    return scale
-  }
+    return scale;
+  };
 
   // For mobile, we'll show only the first 4 apps plus a "more" button
-  const visibleApps = isMobile ? dockApps.slice(0, 4) : dockApps
-  const hiddenApps = isMobile ? dockApps.slice(4) : []
+  const visibleApps = isMobile ? DOCK_APPS.slice(0, 4) : DOCK_APPS;
+  const menuApps = isMobile ? LAUNCHPAD_APPS : [];
 
   return (
-    <div ref={dockRef} className="fixed bottom-2 left-1/2 transform -translate-x-1/2 z-50">
+    <div
+      ref={dockRef}
+      data-role="dock"
+      className={`fixed bottom-2 z-50 ${
+        isMobile
+          ? "left-0 right-0 flex justify-center px-2"
+          : "left-1/2 transform -translate-x-1/2"
+      }`}
+      style={{ bottom: "calc(0.5rem + env(safe-area-inset-bottom))" }}
+    >
       {/* Mobile expanded menu */}
       {isMobile && showMobileMenu && (
         <div
-          className={`absolute bottom-20 left-1/2 transform -translate-x-1/2 w-[280px] 
+          className={`absolute bottom-20 left-1/2 transform -translate-x-1/2 w-[min(320px,calc(100vw-1rem))] max-h-[60vh] overflow-auto 
           ${isDarkMode ? "bg-gray-800/90" : "bg-white/90"} backdrop-blur-xl 
           rounded-xl border border-white/20 shadow-lg p-4 mb-2`}
         >
           <div className="grid grid-cols-4 gap-4">
-            {hiddenApps.map((app) => (
-              <div
+            {menuApps.map((app) => (
+              <button
                 key={app.id}
                 className="flex flex-col items-center justify-center"
                 onClick={() => handleAppClick(app)}
+                type="button"
               >
                 <div className="w-14 h-14 flex items-center justify-center">
-                  <img
+                  <Image
                     src={app.icon || "/placeholder.svg"}
                     alt={app.title}
+                    width={48}
+                    height={48}
+                    sizes="48px"
                     className="w-12 h-12 object-contain"
-                    draggable="false"
+                    draggable={false}
+                    quality={85}
+                    loading="lazy"
                   />
                 </div>
-                <span className={`text-xs mt-1 ${isDarkMode ? "text-white" : "text-gray-800"}`}>{app.title}</span>
-                {activeAppIds.includes(app.id) && <div className="w-1 h-1 bg-white rounded-full mt-1"></div>}
-              </div>
+                <span
+                  className={`text-xs mt-1 ${isDarkMode ? "text-white" : "text-gray-800"}`}
+                >
+                  {app.title}
+                </span>
+                {activeAppIds.includes(app.id) && (
+                  <div className="w-1 h-1 bg-white rounded-full mt-1"></div>
+                )}
+              </button>
             ))}
           </div>
         </div>
@@ -156,63 +240,86 @@ export default function Dock({ onAppClick, onLaunchpadClick, activeAppIds, isDar
 
       {/* Main dock */}
       <div
-        className={`px-3 py-2 rounded-2xl 
-          ${isDarkMode ? "bg-white/10" : "bg-white/60"} backdrop-blur-xl 
+        className={`relative px-3 py-2 rounded-2xl 
+          ${isDarkMode ? "bg-white/10" : "bg-white/60"}
           flex items-end border border-white/20 shadow-lg
-          ${isMobile ? "h-20" : "h-16"}`}
+          ${isMobile ? "h-20 w-full max-w-[calc(100vw-1rem)] overflow-x-auto" : "h-16"}`}
+        data-dock-root
+        style={
+          {
+            backdropFilter: "blur(var(--dock-blur))",
+            WebkitBackdropFilter: "blur(var(--dock-blur))",
+            "--dock-blur": "20px",
+          } as React.CSSProperties
+        }
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
       >
         {visibleApps.map((app, index) => {
-          const scale = getIconScale(index, visibleApps.length)
+          const scale = getIconScale(index, visibleApps.length);
 
           return (
-            <div
+            <button
               key={app.id}
-              className={`flex flex-col items-center justify-end h-full ${isMobile ? "px-3" : "px-2"}`}
+              className={`relative z-10 flex flex-col items-center justify-end h-full ${isMobile ? "px-3" : "px-2"}`}
               style={{
-                transform: isMobile ? "none" : `translateY(${(scale - 1) * -8}px)`,
+                transform: isMobile
+                  ? "none"
+                  : `translateY(${(scale - 1) * -8}px)`,
                 zIndex: scale > 1 ? 10 : 1,
-                transition: mouseX === null ? "transform 0.2s ease-out" : "none",
+                transition: "transform 0.12s ease-out",
               }}
-              onClick={() => handleAppClick(app)}
+              onMouseEnter={handleAppHover}
+              onClick={(e) => handleAppClick(app, e)}
+              type="button"
             >
               <div
                 className="relative cursor-pointer"
+                data-dock-app-id={app.id}
                 style={{
                   transform: isMobile ? "none" : `scale(${scale})`,
                   transformOrigin: "bottom center",
-                  transition: mouseX === null ? "transform 0.2s ease-out" : "none",
+                  transition: "transform 0.12s ease-out",
                 }}
               >
-                <img
-                  src={app.icon || "/placeholder.svg"}
-                  alt={app.title}
-                  className={`object-contain ${isMobile ? "w-14 h-14" : "w-12 h-12"}`}
-                  draggable="false"
-                />
+                <div data-dock-wave-id={app.id}>
+                  <div data-dock-bounce-id={app.id}>
+                    <Image
+                      src={app.icon || "/placeholder.svg"}
+                      alt={app.title}
+                      width={56}
+                      height={56}
+                      sizes="56px"
+                      priority
+                      className={`object-contain ${isMobile ? "w-14 h-14" : "w-12 h-12"} ${app.id === "contact" && pulseContact ? "animate-pulse" : ""}`}
+                      draggable={false}
+                      quality={90}
+                    />
 
-                {/* Tooltip - only on desktop */}
-                {!isMobile && scale > 1.5 && (
-                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-2 py-1 bg-black/70 text-white text-xs rounded whitespace-nowrap">
-                    {app.title}
+                    {/* Tooltip - only on desktop */}
+                    {!isMobile && scale > 1.5 && (
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-2 py-1 bg-black/70 text-white text-xs rounded whitespace-nowrap">
+                        {app.title}
+                      </div>
+                    )}
+
+                    {/* Indicator dot for active apps */}
+                    {activeAppIds.includes(app.id) && (
+                      <div className="absolute bottom-[-5px] left-1/2 transform -translate-x-1/2 w-1 h-1 bg-white rounded-full"></div>
+                    )}
                   </div>
-                )}
-
-                {/* Indicator dot for active apps */}
-                {activeAppIds.includes(app.id) && (
-                  <div className="absolute bottom-[-5px] left-1/2 transform -translate-x-1/2 w-1 h-1 bg-white rounded-full"></div>
-                )}
+                </div>
               </div>
-            </div>
-          )
+            </button>
+          );
         })}
 
         {/* More button for mobile */}
         {isMobile && (
-          <div
+          <button
             className="flex flex-col items-center justify-end h-full px-3"
             onClick={() => setShowMobileMenu(!showMobileMenu)}
+            type="button"
           >
             <div className="relative cursor-pointer">
               <div
@@ -220,12 +327,14 @@ export default function Dock({ onAppClick, onLaunchpadClick, activeAppIds, isDar
                 ${isDarkMode ? "bg-gray-700" : "bg-gray-200"} 
                 ${showMobileMenu ? (isDarkMode ? "bg-blue-700" : "bg-blue-200") : ""}`}
               >
-                <MoreHorizontal className={`w-8 h-8 ${isDarkMode ? "text-white" : "text-gray-800"}`} />
+                <MoreHorizontal
+                  className={`w-8 h-8 ${isDarkMode ? "text-white" : "text-gray-800"}`}
+                />
               </div>
             </div>
-          </div>
+          </button>
         )}
       </div>
     </div>
-  )
+  );
 }

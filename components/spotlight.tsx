@@ -1,83 +1,213 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useRef } from "react"
-import type { AppWindow } from "@/types"
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import Image from "next/image";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
+import {
+  SPOTLIGHT_APPS,
+  type AppRegistryItem,
+} from "@/constants/apps-registry";
+import {
+  APP_WINDOW_DEFAULT_SIZE,
+  APP_WINDOW_POSITION_RANGE,
+} from "@/constants/window-config";
+import { useDesktopStore } from "@/store/useDesktopStore";
+import { useSettingsStore } from "@/store/useSettingsStore";
 
-const spotlightApps = [
-  { id: "safari", title: "Safari", icon: "/safari.png", component: "Safari" },
-  { id: "mail", title: "Mail", icon: "/mail.png", component: "Mail" },
-  { id: "vscode", title: "VS Code", icon: "/vscode.png", component: "VSCode" },
-  { id: "notes", title: "Notes", icon: "/notes.png", component: "Notes" },
-  { id: "facetime", title: "FaceTime", icon: "/facetime.png", component: "FaceTime" },
-  { id: "terminal", title: "Terminal", icon: "/terminal.png", component: "Terminal" },
-  { id: "github", title: "GitHub", icon: "/github.png", component: "GitHub" },
-  { id: "youtube", title: "YouTube", icon: "/youtube.png", component: "YouTube" },
-  { id: "spotify", title: "Spotify", icon: "/spotify.png", component: "Spotify" },
-  { id: "snake", title: "Snake", icon: "/snake.png", component: "Snake" },
-  { id: "weather", title: "Weather", icon: "/weather.png", component: "Weather" },
-]
+const hashString = (input: string) => {
+  let hash = 0;
+  for (let i = 0; i < input.length; i++) {
+    hash = (hash * 31 + input.charCodeAt(i)) >>> 0;
+  }
+  return hash;
+};
 
-interface SpotlightProps {
-  onClose: () => void
-  onAppClick: (app: AppWindow) => void
-}
+const getWindowPosition = (seed: string) => {
+  const xRange =
+    APP_WINDOW_POSITION_RANGE.xMax - APP_WINDOW_POSITION_RANGE.xMin;
+  const yRange =
+    APP_WINDOW_POSITION_RANGE.yMax - APP_WINDOW_POSITION_RANGE.yMin;
 
-export default function Spotlight({ onClose, onAppClick }: SpotlightProps) {
-  const [searchTerm, setSearchTerm] = useState("")
-  const [filteredApps, setFilteredApps] = useState(spotlightApps)
-  const [selectedIndex, setSelectedIndex] = useState(0)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const xUnit = (hashString(`${seed}:x`) % 1000) / 1000;
+  const yUnit = (hashString(`${seed}:y`) % 1000) / 1000;
+
+  return {
+    x: APP_WINDOW_POSITION_RANGE.xMin + xUnit * xRange,
+    y: APP_WINDOW_POSITION_RANGE.yMin + yUnit * yRange,
+  };
+};
+
+export default function Spotlight() {
+  // Desktop state
+  const openApp = useDesktopStore((state) => state.openApp);
+  const setSpotlightOpen = useDesktopStore((state) => state.setSpotlightOpen);
+
+  // Settings state
+  const reduceMotion = useSettingsStore((state) => state.reduceMotion);
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const resultsRef = useRef<HTMLDivElement>(null);
+  const prefersReducedMotionRef = useRef(false);
+
+  const filteredApps = useMemo(() => {
+    if (!searchTerm) return SPOTLIGHT_APPS;
+    return SPOTLIGHT_APPS.filter((app) =>
+      app.title.toLowerCase().includes(searchTerm.toLowerCase()),
+    );
+  }, [searchTerm]);
+
+  const handleAppClick = useCallback(
+    (app: AppRegistryItem) => {
+      const position = getWindowPosition(app.id);
+
+      openApp({
+        id: app.id,
+        title: app.title,
+        component: app.component,
+        position,
+        size: {
+          width: APP_WINDOW_DEFAULT_SIZE.width,
+          height: APP_WINDOW_DEFAULT_SIZE.height,
+        },
+      });
+      setSpotlightOpen(false);
+    },
+    [openApp, setSpotlightOpen],
+  );
 
   useEffect(() => {
     // Focus the input when spotlight opens
-    inputRef.current?.focus()
+    inputRef.current?.focus();
+
+    prefersReducedMotionRef.current =
+      (window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ??
+        false) ||
+      reduceMotion;
 
     // Handle escape key to close
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        onClose()
+        setSpotlightOpen(false);
       } else if (e.key === "ArrowDown") {
-        setSelectedIndex((prev) => (prev < filteredApps.length - 1 ? prev + 1 : prev))
-        e.preventDefault()
+        setSelectedIndex((prev) =>
+          prev < filteredApps.length - 1 ? prev + 1 : prev,
+        );
+        e.preventDefault();
       } else if (e.key === "ArrowUp") {
-        setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev))
-        e.preventDefault()
+        setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
+        e.preventDefault();
       } else if (e.key === "Enter" && filteredApps.length > 0) {
-        handleAppClick(filteredApps[selectedIndex])
-        e.preventDefault()
+        handleAppClick(filteredApps[selectedIndex]);
+        e.preventDefault();
       }
-    }
+    };
 
-    window.addEventListener("keydown", handleKeyDown)
-    return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [filteredApps, selectedIndex])
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [
+    filteredApps,
+    selectedIndex,
+    handleAppClick,
+    reduceMotion,
+    setSpotlightOpen,
+  ]);
 
-  useEffect(() => {
-    if (searchTerm) {
-      const filtered = spotlightApps.filter((app) => app.title.toLowerCase().includes(searchTerm.toLowerCase()))
-      setFilteredApps(filtered)
-      setSelectedIndex(0) // Reset selection when search changes
-    } else {
-      setFilteredApps(spotlightApps)
-    }
-  }, [searchTerm])
+  useGSAP(
+    () => {
+      const overlayEl = overlayRef.current;
+      const panelEl = panelRef.current;
+      if (!overlayEl || !panelEl) return;
 
-  const handleAppClick = (app: (typeof spotlightApps)[0]) => {
-    onAppClick({
-      id: app.id,
-      title: app.title,
-      component: app.component,
-      position: { x: Math.random() * 200 + 100, y: Math.random() * 100 + 50 },
-      size: { width: 800, height: 600 },
-    })
-    onClose()
-  }
+      gsap.set(overlayEl, { "--spotlight-blur": "0px" });
+
+      if (prefersReducedMotionRef.current) {
+        gsap.set(panelEl, { opacity: 1, scale: 1, y: 0 });
+        return;
+      }
+
+      gsap.fromTo(
+        panelEl,
+        { opacity: 0, scale: 0.95, y: -8, transformOrigin: "center center" },
+        {
+          opacity: 1,
+          scale: 1,
+          y: 0,
+          duration: 0.36,
+          ease: "back.out(1.6)",
+          clearProps: "opacity,transform",
+        },
+      );
+    },
+    { dependencies: [] },
+  );
+
+  useGSAP(
+    () => {
+      const overlayEl = overlayRef.current;
+      if (!overlayEl) return;
+      if (prefersReducedMotionRef.current) return;
+
+      const blurPx = Math.min(12, Math.max(0, searchTerm.length * 0.8));
+      gsap.to(overlayEl, {
+        duration: 0.18,
+        ease: "power2.out",
+        overwrite: "auto",
+        "--spotlight-blur": `${blurPx}px`,
+      });
+    },
+    { dependencies: [searchTerm] },
+  );
+
+  useGSAP(
+    () => {
+      const resultsEl = resultsRef.current;
+      if (!resultsEl) return;
+      if (prefersReducedMotionRef.current) return;
+
+      const items = resultsEl.querySelectorAll<HTMLElement>(
+        "[data-spotlight-result]",
+      );
+      if (!items.length) return;
+
+      gsap.killTweensOf(items);
+      gsap.fromTo(
+        items,
+        { opacity: 0, y: -6 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.14,
+          ease: "power2.out",
+          stagger: 0.035,
+          clearProps: "opacity,transform",
+        },
+      );
+    },
+    { dependencies: [filteredApps] },
+  );
 
   return (
-    <div className="fixed inset-0 bg-transparent z-40 flex items-center justify-center" onClick={onClose}>
+    <div
+      ref={overlayRef}
+      className="fixed inset-0 bg-transparent z-40 flex items-center justify-center"
+      style={
+        {
+          backdropFilter: "blur(var(--spotlight-blur))",
+          WebkitBackdropFilter: "blur(var(--spotlight-blur))",
+          "--spotlight-blur": "0px",
+        } as React.CSSProperties
+      }
+      onMouseDown={() => setSpotlightOpen(false)}
+    >
       <div
+        ref={panelRef}
         className="w-full max-w-2xl bg-gray-800/80 backdrop-blur-xl rounded-xl overflow-hidden shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="relative">
           <svg
@@ -100,15 +230,20 @@ export default function Spotlight({ onClose, onAppClick }: SpotlightProps) {
             placeholder="Search"
             className="w-full bg-transparent text-white border-0 py-4 pl-12 pr-4 focus:outline-none text-lg"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setSelectedIndex(0);
+            }}
           />
         </div>
 
         {filteredApps.length > 0 && (
-          <div className="max-h-80 overflow-y-auto">
+          <div ref={resultsRef} className="max-h-80 overflow-y-auto">
             {filteredApps.map((app, index) => (
-              <div
+              <button
                 key={app.id}
+                type="button"
+                data-spotlight-result
                 className={`flex items-center px-4 py-3 cursor-pointer ${
                   index === selectedIndex ? "bg-blue-500" : "hover:bg-gray-700"
                 }`}
@@ -116,14 +251,20 @@ export default function Spotlight({ onClose, onAppClick }: SpotlightProps) {
                 onMouseEnter={() => setSelectedIndex(index)}
               >
                 <div className="w-8 h-8 flex items-center justify-center mr-3">
-                  <img src={app.icon || "/placeholder.svg"} alt={app.title} className="w-6 h-6 object-contain" />
+                  <Image
+                    src={app.icon || "/placeholder.svg"}
+                    alt={app.title}
+                    width={24}
+                    height={24}
+                    className="w-6 h-6 object-contain"
+                  />
                 </div>
                 <span className="text-white">{app.title}</span>
-              </div>
+              </button>
             ))}
           </div>
         )}
       </div>
     </div>
-  )
+  );
 }

@@ -1,0 +1,40 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Maen Ababneh Portfolio API",
+    "version": "1.0.0",
+    "description": "Public API endpoints for portfolio integrations and agent discovery."
+  },
+  "servers": [
+    {
+      "url": "https://macos.maenababneh.dev"
+    }
+  ],
+  "paths": {
+    "/api/github/projects": {
+      "get": {
+        "summary": "Get featured GitHub projects",
+        "operationId": "getFeaturedProjects",
+        "responses": {
+          "200": {
+            "description": "Featured project payload"
+          },
+          "500": {
+            "description": "Error fetching project data"
+          }
+        }
+      }
+    },
+    "/api/health": {
+      "get": {
+        "summary": "Service health check",
+        "operationId": "getHealth",
+        "responses": {
+          "200": {
+            "description": "Service is available"
+          }
+        }
+      }
+    }
+  }
+}
